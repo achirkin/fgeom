@@ -55,7 +55,6 @@ class ScalarVector a where
     -- | Multiply vector by scalar
     infixl 7 ..*
     (..*) :: (Num t) => t -> a t -> a t
-    (..*) = flip (*..)
     -- | Multiply vector by scalar
     infixl 7 *..
     (*..) :: (Num t) => a t -> t -> a t

@@ -14,6 +14,7 @@ cabal.config
 .dist-buildwrapper/
 .project
 .settings/
+docs/
 
 # my own stuff
 *.nb

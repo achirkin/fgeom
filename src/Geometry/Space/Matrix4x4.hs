@@ -25,7 +25,7 @@ import Foreign.Storable ( Storable(..) )
 import Geometry.Space.StorableHelpers
 import Geometry.Space.Operations
 
--- | 2D square matrix
+-- | 4D square matrix
 data Matrix4x4 a = Matrix4x4 !a !a !a !a !a !a !a !a !a !a !a !a !a !a !a !a
     deriving (Eq, Ord, Ix, Bounded, Show, Read, Typeable)
 
