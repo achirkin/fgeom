@@ -9,3 +9,11 @@ cabal-dev
 .cabal-sandbox/
 cabal.sandbox.config
 cabal.config
+
+# eclipse stuff
+.dist-buildwrapper/
+.project
+.settings/
+
+# my own stuff
+*.nb
