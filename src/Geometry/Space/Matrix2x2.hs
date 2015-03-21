@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix2x2
@@ -24,6 +24,7 @@ import Foreign.Storable ( Storable(..) )
 
 import Geometry.Space.StorableHelpers
 import Geometry.Space.Operations
+import Geometry.Space.Vector2
 
 -- | 2D square matrix
 data Matrix2x2 a = Matrix2x2 !a !a !a !a
@@ -36,23 +37,25 @@ data Matrix2x2 a = Matrix2x2 !a !a !a !a
 --------------------------------------------------------------------------------
 
 instance Functor Matrix2x2 where
-   fmap f (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (f x11) (f x12) (f x21) (f x22)
+    fmap f (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (f x11) (f x12) (f x21) (f x22)
 
 instance Applicative Matrix2x2 where
-   pure a = Matrix2x2 a a a a
-   Matrix2x2 f g h i <*> Matrix2x2 x11 x12 x21 x22 = Matrix2x2 (f x11) (g x12) (h x21) (i x22)
+    pure a = Matrix2x2 a a a a
+    Matrix2x2 f g h i <*> Matrix2x2 x11 x12 x21 x22 = Matrix2x2 (f x11) (g x12) (h x21) (i x22)
 
+-- | Fold all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Foldable Matrix2x2 where
-   foldr f a (Matrix2x2 x11 x12 x21 x22) = f x11 (f x12 (f x21 (f x22 a)))
-   foldl f a (Matrix2x2 x11 x12 x21 x22) = f (f (f (f a x11) x12) x21) x22
-   foldr1 f (Matrix2x2 x11 x12 x21 x22) = f x11 (f x12 (f x21 x22))
-   foldl1 f (Matrix2x2 x11 x12 x21 x22) = f (f (f x11 x12) x21) x22
+    foldr f a (Matrix2x2 x11 x12 x21 x22) = f x11 (f x21 (f x12 (f x22 a)))
+    foldl f a (Matrix2x2 x11 x12 x21 x22) = f (f (f (f a x11) x21) x12) x22
+    foldr1 f (Matrix2x2 x11 x12 x21 x22) = f x11 (f x21 (f x12 x22))
+    foldl1 f (Matrix2x2 x11 x12 x21 x22) = f (f (f x11 x21) x12) x22
 
+-- | Traverse computations through all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Traversable Matrix2x2 where
-   traverse f (Matrix2x2 x11 x12 x21 x22) = pure Matrix2x2 <*> f x11 <*> f x12 <*> f x21 <*> f x22
-   sequenceA (Matrix2x2 x11 x12 x21 x22) =  pure Matrix2x2 <*> x11 <*> x12 <*> x21 <*> x22
-   mapM f (Matrix2x2 x11 x12 x21 x22) = return Matrix2x2 `ap` f x11 `ap` f x12 `ap` f x21 `ap` f x22
-   sequence (Matrix2x2 x11 x12 x21 x22) = return Matrix2x2 `ap` x11 `ap` x12 `ap` x21 `ap` x22
+   traverse f (Matrix2x2 x11 x12 x21 x22) = pure Matrix2x2 <*> f x11 <*> f x21 <*> f x12 <*> f x22
+   sequenceA (Matrix2x2 x11 x12 x21 x22) =  pure Matrix2x2 <*> x11 <*> x21 <*> x12 <*> x22
+   mapM f (Matrix2x2 x11 x12 x21 x22) = return Matrix2x2 `ap` f x11 `ap` f x21 `ap` f x12 `ap` f x22
+   sequence (Matrix2x2 x11 x12 x21 x22) = return Matrix2x2 `ap` x11 `ap` x21 `ap` x12 `ap` x22
 
 instance Storable a => Storable (Matrix2x2 a) where
    sizeOf ~(Matrix2x2 x _ _ _) = 4 * sizeOf x
@@ -88,3 +91,8 @@ instance Matrix Matrix2x2 where
     getij (Matrix2x2 _ _ _ x22) 1 1 = x22
     getij _ i j = error $ "index [" ++ show i ++ "," ++ show j ++ "] is out of range"
     eye = Matrix2x2  1 0 0 1
+    transpose (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 x11 x21 x12 x22
+    trace (Matrix2x2 x11 _ _ x22)= x11 + x22
+
+instance MatrixVector Matrix2x2 Vector2 where
+    diag (Vector2 x y) = Matrix2x2 x 0 0 y

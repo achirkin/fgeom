@@ -81,7 +81,7 @@ instance ScalarVector Vector3 where
     (Vector3 x y z) /.. c = Vector3 (x/c) (y/c) (z/c)
     c ../ (Vector3 x y z) = Vector3 (c/x) (c/y) (c/z)
 
-instance ScalarProduct Vector3 where
+instance Vector Vector3 where
     (Vector3 a b c) .*. (Vector3 p q r) = a*p + b*q + c*r
 
 

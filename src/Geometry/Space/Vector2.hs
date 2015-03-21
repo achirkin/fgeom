@@ -81,7 +81,7 @@ instance ScalarVector Vector2 where
     (Vector2 x y) /.. c = Vector2 (x/c) (y/c)
     c ../ (Vector2 x y) = Vector2 (c/x) (c/y)
 
-instance ScalarProduct Vector2 where
+instance Vector Vector2 where
     (Vector2 a b) .*. (Vector2 p q) = a*p + b*q
 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Operations
@@ -67,25 +68,25 @@ class ScalarVector a where
     (../) :: (Fractional t) => t -> a t -> a t
 
 --------------------------------------------------------------------------------
--- * Scalar Products & Norms
+-- * Generic vectors
 --------------------------------------------------------------------------------
 
--- | Scalar product for vectors
-class ScalarProduct a where
+-- | Various vector operations
+class Vector a where
     -- | Scalar product is a sum of vectors' components products
     infixl 7 .*.
     (.*.) :: (Num x) => a x -> a x -> x
 
 -- | Squared Euclidean norm of a vector (L2 norm) - a scalar product on itself.
-normL2Squared :: (Num t, ScalarProduct a) => a t -> t
+normL2Squared :: (Num t, Vector a) => a t -> t
 normL2Squared x = x.*.x
 
 -- | Euclidean norm of a vector (L2 norm) - a square root of a scalar product on itself.
-normL2 :: (Floating t, ScalarProduct a) => a t -> t
+normL2 :: (Floating t, Vector a) => a t -> t
 normL2 x = sqrt $ x.*.x
 
 -- | Take a unit vector
-unit :: (Floating t, ScalarProduct a, ScalarVector a) => a t -> a t
+unit :: (Floating t, Vector a, ScalarVector a) => a t -> a t
 unit x = x /.. normL2 x
 
 --------------------------------------------------------------------------------
@@ -99,3 +100,15 @@ class Matrix a where
     getij :: a x -> Int -> Int -> x
     -- | matrix with 1 on diagonal and 0 elsewhere
     eye :: (Num x) => a x
+    -- | transpose elements of a matrix
+    transpose :: a x -> a x
+    -- | sum of diagonal elements
+    trace :: (Num x) => a x -> x 
+
+--------------------------------------------------------------------------------
+-- * Matrix-Vector interoperation
+--------------------------------------------------------------------------------
+
+class MatrixVector m v where
+    -- | Put vector values on the matrix diagonal
+    diag :: (Num x) => v x -> m x

@@ -1,5 +1,5 @@
 name:           fgeom
-version:        0.1
+version:        0.1.1
 cabal-version:  >= 1.18
 build-type:     Simple
 author:         Artem M. Chirkin <chirkin@arch.ethz.ch>
@@ -27,7 +27,11 @@ library
                     Geometry.Space.TensorOperations,
                     Geometry.Space.Vector2,
                     Geometry.Space.Vector3,
-                    Geometry.Space.Vector4
+                    Geometry.Space.Vector4,
+                    Geometry.Space.Transform.MatrixTransform,
+                    Geometry.Space.Transform,
+                    Geometry.Space.Transform.QuaternionTransform,
+                    Geometry.Space.Transform.TransformInterop
   exposed-modules:   Geometry.Space
 
 test-suite VectorTests

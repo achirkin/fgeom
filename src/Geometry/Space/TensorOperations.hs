@@ -33,7 +33,7 @@ class TensorProduct a b c | a b -> c, a c -> b, b c -> a where
     prod :: a -> b -> c
 
 
--- | Inverse matrices
+-- | Inverse matrices and quaternions
 class InvertableTensor a where
     -- | Right-side division
     infixl 7 //

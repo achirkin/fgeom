@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix3x3
@@ -24,6 +24,7 @@ import Foreign.Storable ( Storable(..) )
 
 import Geometry.Space.StorableHelpers
 import Geometry.Space.Operations
+import Geometry.Space.Vector3
 
 -- | 3D square matrix
 data Matrix3x3 a = Matrix3x3 !a !a !a !a !a !a !a !a !a
@@ -44,25 +45,27 @@ instance Applicative Matrix3x3 where
     Matrix3x3 f11 f12 f13 f21 f22 f23 f31 f32 f33 <*> Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33
         = Matrix3x3 (f11 x11) (f12 x12) (f13 x13) (f21 x21) (f22 x22) (f23 x23) (f31 x31) (f32 x32) (f33 x33)
 
+-- | Fold all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Foldable Matrix3x3 where
     foldr f a (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = f x11 (f x12 (f x13 (f x21 (f x22 (f x23 (f x31 (f x32 (f x33 a))))))))
+        = f x11 (f x21 (f x31 (f x12 (f x22 (f x32 (f x13 (f x23 (f x33 a))))))))
     foldl f a (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = f (f (f (f (f (f (f (f (f a x11) x12) x13) x21) x22) x23) x31) x32) x33
+        = f (f (f (f (f (f (f (f (f a x11) x21) x31) x12) x22) x32) x13) x23) x33
     foldr1 f (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = f x11 (f x12 (f x13 (f x21 (f x22 (f x23 (f x31 (f x32 x33)))))))
+        = f x11 (f x21 (f x31 (f x12 (f x22 (f x32 (f x13 (f x23 x33)))))))
     foldl1 f (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = f (f (f (f (f (f (f (f x11 x12) x13) x21) x22) x23) x31) x32) x33
+        = f (f (f (f (f (f (f (f x11 x21) x31) x12) x22) x32) x13) x23) x33
 
+-- | Traverse computations through all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Traversable Matrix3x3 where
     traverse f (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = pure Matrix3x3 <*> f x11 <*> f x12 <*> f x13 <*> f x21 <*> f x22 <*> f x23 <*> f x31 <*> f x32 <*> f x33
+        = pure Matrix3x3 <*> f x11 <*> f x21 <*> f x31 <*> f x12 <*> f x22 <*> f x32 <*> f x13 <*> f x23 <*> f x33
     sequenceA (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        =  pure Matrix3x3 <*> x11 <*> x12 <*> x13 <*> x21 <*> x22 <*> x23 <*> x31 <*> x32 <*> x33
+        =  pure Matrix3x3 <*> x11 <*> x21 <*> x31 <*> x12 <*> x22 <*> x32 <*> x13 <*> x23 <*> x33
     mapM f (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = return Matrix3x3 `ap` f x11 `ap` f x12 `ap` f x13 `ap` f x21 `ap` f x22 `ap` f x23 `ap` f x31 `ap` f x32 `ap` f x33
+        = return Matrix3x3 `ap` f x11 `ap` f x21 `ap` f x31 `ap` f x12 `ap` f x22 `ap` f x32 `ap` f x13 `ap` f x23 `ap` f x33
     sequence (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
-        = return Matrix3x3 `ap` x11 `ap` x12 `ap` x13 `ap` x21 `ap` x22 `ap` x23 `ap` x31 `ap` x32 `ap` x33
+        = return Matrix3x3 `ap` x11 `ap` x21 `ap` x31 `ap` x12 `ap` x22 `ap` x32 `ap` x13 `ap` x23 `ap` x33
 
 instance Storable a => Storable (Matrix3x3 a) where
     sizeOf ~(Matrix3x3 x _ _ _ _ _ _ _ _) = 9 * sizeOf x
@@ -115,4 +118,17 @@ instance Matrix Matrix3x3 where
     getij (Matrix3x3 _ _ _ _ _ _ _ _ x33) 2 2 = x33
     getij _ i j = error $ "index [" ++ show i ++ "," ++ show j ++ "] is out of range"
     eye = Matrix3x3  1 0 0 0 1 0 0 0 1
+    transpose (Matrix3x3 x11 x12 x13
+                         x21 x22 x23
+                         x31 x32 x33)
+        = Matrix3x3
+        x11 x21 x31
+        x12 x22 x32
+        x13 x23 x33
+    trace (Matrix3x3 x11 _ _ _ x22 _ _ _ x33)= x11 + x22 + x33
 
+instance MatrixVector Matrix3x3 Vector3 where
+    diag (Vector3 x y z) = Matrix3x3
+        x 0 0
+        0 y 0
+        0 0 z

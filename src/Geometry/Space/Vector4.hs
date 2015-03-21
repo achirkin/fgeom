@@ -84,7 +84,7 @@ instance ScalarVector Vector4 where
     (Vector4 x y z w) /.. c = Vector4 (x/c) (y/c) (z/c) (w/c)
     c ../ (Vector4 x y z w) = Vector4 (c/x) (c/y) (c/z) (c/w)
 
-instance ScalarProduct Vector4 where
+instance Vector Vector4 where
     (Vector4 a b c d) .*. (Vector4 p q r s) = a*p + b*q + c*r + s*d
 
 --------------------------------------------------------------------------------
@@ -138,8 +138,7 @@ qmult (Vector4 b c d a) (Vector4 q r s p) = Vector4
 --   this is equivalent to sqrt q * x * (sqrt $ conjugate q)
 rotScale :: (Floating a, Eq a) => Quaternion a -> Vector3 a -> Vector3 a
 rotScale _ p@(Vector3 0 0 0) = p
-rotScale (Vector4 _ _ _ 1) v = v
-rotScale (Vector4 _ _ _ (-1)) v = neg v
+rotScale (Vector4 0 0 0 t) v = v *.. t
 rotScale (Vector4 i j k t) (Vector3 a b c) =
     let dot = ( a*i + b*j + c*k ) / (len + t)
         len = sqrt $ i*i + j*j + k*k + t*t
@@ -158,10 +157,10 @@ getRotScale a b = Vector4 x y z (a' .*. b)
 -- | Creates a rotation versor from an axis vector and an angle in radians.
 axisRotation :: (Eq a, Floating a, Real a) => Vector3 a -> a -> Quaternion a
 axisRotation v a = Vector4 x y z w
-    where Vector3 x y z | w == 1    = Vector3 0 0 0
-                        | w == 0    = unit v
-                        | otherwise = v *.. (sqrt (1 - w*w) / normL2 v)
-          w = cos $ DF.mod' (a+pi) (2*pi) - pi
+    where Vector3 x y z | w == 1 || w == -1 = Vector3 0 0 0
+                        | w == 0            = unit v
+                        | otherwise         = v *.. (sqrt (1 - w*w) / normL2 v)
+          w = cos $ DF.mod' (a-pi) (2*pi) + pi
 
 
 

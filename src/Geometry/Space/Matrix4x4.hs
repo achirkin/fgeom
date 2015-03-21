@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix4x4
@@ -22,6 +22,7 @@ import Data.Traversable ( Traversable(..) )
 import Data.Typeable ( Typeable )
 import Foreign.Storable ( Storable(..) )
 
+import Geometry.Space.Vector4
 import Geometry.Space.StorableHelpers
 import Geometry.Space.Operations
 
@@ -48,45 +49,47 @@ instance Applicative Matrix4x4 where
                     (f31 x31) (f32 x32) (f33 x33) (f34 x34)
                     (f41 x41) (f42 x42) (f43 x43) (f44 x44)
 
+-- | Fold all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Foldable Matrix4x4 where
     foldr f a (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = f x11 (f x12 (f x13 (f x14(
-          f x21 (f x22 (f x23 (f x24(
-          f x31 (f x32 (f x33 (f x34(
-          f x41 (f x42 (f x43 (f x44 a)))))))))))))))
+        = f x11 (f x21 (f x31 (f x41(
+          f x12 (f x22 (f x32 (f x42(
+          f x13 (f x23 (f x33 (f x43(
+          f x14 (f x24 (f x34 (f x44 a)))))))))))))))
     foldl f a (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
         = f (f (f (f (f (f (f (f (f (f (f (f (f (f (f (f a 
-          x11) x12) x13) x14) x21) x22) x23) x24) x31) x32) x33) x34) x41) x42) x43) x44
+          x11) x21) x31) x41) x12) x22) x32) x42) x13) x23) x33) x43) x14) x24) x34) x44
     foldr1 f (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = f x11 (f x12 (f x13 (f x14(
-          f x21 (f x22 (f x23 (f x24(
-          f x31 (f x32 (f x33 (f x34(
-          f x41 (f x42 (f x43 x44))))))))))))))
+        = f x11 (f x21 (f x31 (f x41(
+          f x12 (f x22 (f x32 (f x42(
+          f x13 (f x23 (f x33 (f x43(
+          f x14 (f x24 (f x34 x44))))))))))))))
     foldl1 f (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
         = f (f (f (f (f (f (f (f (f (f (f (f (f (f (f 
-          x11 x12) x13) x14) x21) x22) x23) x24) x31) x32) x33) x34) x41) x42) x43) x44
+          x11 x21) x31) x41) x12) x22) x32) x42) x13) x23) x33) x43) x14) x24) x34) x44
 
+-- | Traverse computations through all elements of a matrix in a column-major order (element-by-element in column, column-by-column)
 instance Traversable Matrix4x4 where
     traverse f (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = pure Matrix4x4 <*> f x11 <*> f x12 <*> f x13 <*> f x14
-                         <*> f x21 <*> f x22 <*> f x23 <*> f x24
-                         <*> f x31 <*> f x32 <*> f x33 <*> f x34
-                         <*> f x41 <*> f x42 <*> f x43 <*> f x44
+        = pure Matrix4x4 <*> f x11 <*> f x21 <*> f x31 <*> f x41
+                         <*> f x12 <*> f x22 <*> f x32 <*> f x42
+                         <*> f x13 <*> f x23 <*> f x33 <*> f x43
+                         <*> f x14 <*> f x24 <*> f x34 <*> f x44
     sequenceA (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = pure Matrix4x4 <*> x11 <*> x12 <*> x13 <*> x14
-                         <*> x21 <*> x22 <*> x23 <*> x24
-                         <*> x31 <*> x32 <*> x33 <*> x34
-                         <*> x41 <*> x42 <*> x43 <*> x44
+        = pure Matrix4x4 <*> x11 <*> x21 <*> x31 <*> x41
+                         <*> x12 <*> x22 <*> x32 <*> x42
+                         <*> x13 <*> x23 <*> x33 <*> x43
+                         <*> x14 <*> x24 <*> x34 <*> x44
     mapM f (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = return Matrix4x4 `ap` f x11 `ap` f x12 `ap` f x13 `ap` f x14
-                           `ap` f x21 `ap` f x22 `ap` f x23 `ap` f x24
-                           `ap` f x31 `ap` f x32 `ap` f x33 `ap` f x34
-                           `ap` f x41 `ap` f x42 `ap` f x43 `ap` f x44
+        = return Matrix4x4 `ap` f x11 `ap` f x21 `ap` f x31 `ap` f x41
+                           `ap` f x12 `ap` f x22 `ap` f x32 `ap` f x42
+                           `ap` f x13 `ap` f x23 `ap` f x33 `ap` f x43
+                           `ap` f x14 `ap` f x24 `ap` f x34 `ap` f x44
     sequence (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
-        = return Matrix4x4 `ap` x11 `ap` x12 `ap` x13 `ap` x14
-                           `ap` x21 `ap` x22 `ap` x23 `ap` x24
-                           `ap` x31 `ap` x32 `ap` x33 `ap` x34
-                           `ap` x41 `ap` x42 `ap` x43 `ap` x44
+        = return Matrix4x4 `ap` x11 `ap` x21 `ap` x31 `ap` x41
+                           `ap` x12 `ap` x22 `ap` x32 `ap` x42
+                           `ap` x13 `ap` x23 `ap` x33 `ap` x43
+                           `ap` x14 `ap` x24 `ap` x34 `ap` x44
 
 instance Storable a => Storable (Matrix4x4 a) where
     sizeOf ~(Matrix4x4 x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) = 16 * sizeOf x
@@ -150,4 +153,20 @@ instance Matrix Matrix4x4 where
                      0 1 0 0
                      0 0 1 0
                      0 0 0 1
+    transpose (Matrix4x4
+        x11 x12 x13 x14
+        x21 x22 x23 x24
+        x31 x32 x33 x34
+        x41 x42 x43 x44) = Matrix4x4
+        x11 x21 x31 x41
+        x12 x22 x32 x42
+        x13 x23 x33 x43
+        x14 x24 x34 x44
+    trace (Matrix4x4 x11 _ _ _ _ x22 _ _ _ _ x33 _ _ _ _ x44)= x11 + x22 + x33 + x44
 
+instance MatrixVector Matrix4x4 Vector4 where
+    diag (Vector4 x y z w) = Matrix4x4
+        x 0 0 0
+        0 y 0 0
+        0 0 z 0
+        0 0 0 w
