@@ -33,3 +33,4 @@ class SpaceTransform s where
     transformM3 :: (Eq t, Floating t) => Matrix3x3 t -> x -> s t x
     transformM4 :: (Eq t, Floating t) => Matrix4x4 t -> x -> s t x
     unwrap :: s t x -> x
+    wrap :: (Num t) => x -> s t x

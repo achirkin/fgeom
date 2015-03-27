@@ -62,7 +62,7 @@ instance SpaceTransform QTransform where
                            x21 x22 x23
                            x31 x32 x33) ()
     unwrap (QTransform _ _ x) = x
-
+    wrap = QTransform (Vector4 0 0 0 1) zeros
 
 fromMatrix3x3 :: (Floating t, Eq t) => Matrix3x3 t -> Quaternion t
 fromMatrix3x3 (Matrix3x3 x11 x12 x13

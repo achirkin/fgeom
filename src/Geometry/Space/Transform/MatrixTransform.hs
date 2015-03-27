@@ -62,7 +62,7 @@ instance SpaceTransform MTransform where
                             0   0   0  1
     transformM4 = MTransform
     unwrap (MTransform _ v) = v
-
+    wrap = MTransform eye
 
 
 
