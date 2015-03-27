@@ -27,8 +27,9 @@ class SpaceTransform s where
     rotateZ :: (Floating t) => t -> x -> s t x
     scale :: (Num t) => t -> x -> s t x
     translate :: (Num t) => Vector3 t -> x -> s t x
-    rotateScale :: (Floating t) => Quaternion t -> x -> s t x
+    rotateScale :: (Eq t, Floating t) => Quaternion t -> x -> s t x
     applyV3 :: (Eq t, Floating t) => s t (Vector3 t) -> Vector3 t
     applyV4 :: (Eq t, Floating t) => s t (Vector4 t) -> Vector4 t
     transformM3 :: (Eq t, Floating t) => Matrix3x3 t -> x -> s t x
     transformM4 :: (Eq t, Floating t) => Matrix4x4 t -> x -> s t x
+    unwrap :: s t x -> x

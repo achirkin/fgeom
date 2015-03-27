@@ -159,8 +159,9 @@ axisRotation :: (Eq a, Floating a, Real a) => Vector3 a -> a -> Quaternion a
 axisRotation v a = Vector4 x y z w
     where Vector3 x y z | w == 1 || w == -1 = Vector3 0 0 0
                         | w == 0            = unit v
-                        | otherwise         = v *.. (sqrt (1 - w*w) / normL2 v)
-          w = cos $ DF.mod' (a-pi) (2*pi) + pi
+                        | otherwise         = v *.. (sin a' / normL2 v)
+          w = cos a'
+          a' = DF.mod' (a+pi) (2*pi) - pi
 
 
 
@@ -170,7 +171,7 @@ axisRotation v a = Vector4 x y z w
 --------------------------------------------------------------------------
 
 -- | Quatertion is Numeric
-instance (Ord a, Floating a) => Num (Quaternion a) where
+instance (Floating a) => Num (Quaternion a) where
     (+)  = (.+)
     (-) = (.-)
     (*) = qmult
@@ -180,7 +181,7 @@ instance (Ord a, Floating a) => Num (Quaternion a) where
     fromInteger i = Vector4 0 0 0 (fromInteger i)
 
 -- | Fractional is implemented using right-side division
-instance (Ord a, Floating a) => Fractional (Quaternion a) where
+instance (Floating a) => Fractional (Quaternion a) where
     recip q = conjugate q /.. (q .*. q)
     p / q = qmult p . recip $ q
     fromRational r = Vector4 0 0 0 (fromRational r)

@@ -32,11 +32,11 @@ instance Functor (QTransform t) where
 
 instance (Floating t, Eq t) => Applicative (QTransform t) where
     pure = QTransform (Vector4 0 0 0 1) zeros
-    QTransform qf vf f <*> QTransform qx vx x = QTransform (qx `qmult` qf) (rotScale qx vf .+ vx) (f x)
+    QTransform qf vf f <*> QTransform qx vx x = QTransform (qf * qx) (rotScale qf vx .+ vf) (f x)
 
 instance (Floating t, Eq t) => Monad (QTransform t) where
     return = QTransform (Vector4 0 0 0 1) zeros
-    (QTransform q v x) >>= f = QTransform (q `qmult` q') (rotScale q v' .+ v) y
+    (QTransform q v x) >>= f = QTransform (q * q') (rotScale q v' .+ v) y
         where QTransform q' v' y = f x
 
 instance SpaceTransform QTransform where
@@ -61,6 +61,7 @@ instance SpaceTransform QTransform where
                            x11 x12 x13
                            x21 x22 x23
                            x31 x32 x33) ()
+    unwrap (QTransform _ _ x) = x
 
 
 fromMatrix3x3 :: (Floating t, Eq t) => Matrix3x3 t -> Quaternion t

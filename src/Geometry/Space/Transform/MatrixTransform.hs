@@ -32,7 +32,7 @@ instance Functor (MTransform t) where
 
 instance (Floating t, Eq t) => Applicative (MTransform t) where
     pure = MTransform eye
-    MTransform mf f <*> MTransform mx x = MTransform (mx `prod` mf) (f x)
+    MTransform mf f <*> MTransform mx x = MTransform (mf `prod` mx) (f x)
 
 instance (Floating t, Eq t) => Monad (MTransform t) where
     return = MTransform eye
@@ -61,7 +61,7 @@ instance SpaceTransform MTransform where
                            x31 x32 x33 0
                             0   0   0  1
     transformM4 = MTransform
-
+    unwrap (MTransform _ v) = v
 
 
 
@@ -142,17 +142,20 @@ rotateEulerM x y z = Matrix4x4
 --   NB: in our implementation quaternion rotation is assumed to be twice lesser than usual
 --   (@q = cos a + v * sin a@ instead of @a/2@)
 --   This means, rotation is @sqrt q * x * sqrt (conjugate q)@
-toMatrix4x4 :: Floating a
+toMatrix4x4 :: (Eq a, Floating a)
             => Quaternion a  -- ^ Quaternion of r
             -> Matrix4x4 a
+toMatrix4x4 (Vector4 0 0 0 w) = Matrix4x4
+    w 0 0 0
+    0 w 0 0
+    0 0 w 0
+    0 0 0 1
 toMatrix4x4 q@(Vector4 x y z w) = Matrix4x4
-    (  w + c1*x*x) (c1*x*y - s*z) (c1*x*z + s*y) 0
-    (c1*x*y + s*z) (  w + c1*y*y) (c1*y*z - s*x) 0
-    (c1*x*z - s*y) (c1*y*z + s*x) ( w  + c1*z*z) 0
-     0              0              0             1
-        where s = sqrt $ l*l - w*w
-              c1 = l - w
-              l = normL2 q
+    (w + c1*x*x) (c1*x*y - z) (c1*x*z + y) 0
+    (c1*x*y + z) (w + c1*y*y) (c1*y*z - x) 0
+    (c1*x*z - y) (c1*y*z + x) (w + c1*z*z) 0
+     0              0              0       1
+        where c1 = 1 / (normL2 q + w)
 
 
 
