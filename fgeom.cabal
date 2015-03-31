@@ -19,23 +19,17 @@ library
   ghc-options:       -Wall
   default-language:  Haskell2010
   other-modules:     
-                    Geometry.Space.Matrix2x2,
-                    Geometry.Space.Matrix3x3,
-                    Geometry.Space.Matrix4x4,
-                    Geometry.Space.Operations,
-                    Geometry.Space.StorableHelpers,
+                    Geometry.Space.ScalarOperations,
+                    Geometry.Space.ScalarTensorOperations,
                     Geometry.Space.TensorOperations,
-                    Geometry.Space.Vector2,
-                    Geometry.Space.Vector3,
-                    Geometry.Space.Vector4,
                     Geometry.Space.Transform.MatrixTransform,
-                    Geometry.Space.Transform,
                     Geometry.Space.Transform.QuaternionTransform,
                     Geometry.Space.Transform.TransformInterop,
-                    Geometry.Structure.Enumerable
+                    Geometry.Space.Types
   exposed-modules:   
                      Geometry.Space,
-                     Geometry.Structure
+                     Geometry.Space.Quaternion,
+                     Geometry.Space.Transform
 
 test-suite VectorTests
   type:            exitcode-stdio-1.0
@@ -48,6 +42,8 @@ test-suite VectorTests
                   Geometry.Space.Matrix2x2Test,
                   Geometry.Space.Matrix3x3Test,
                   Geometry.Space.Matrix4x4Test,
+                  Geometry.Space.Quaternion,
+                  Geometry.Space.Transform,
                   Geometry.Space.Vector3Test,
                   Geometry.Space.Vector4Test,
                   Geometry.Space.VectorGenerators

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.MatrixTransform
@@ -14,16 +15,17 @@
 module Geometry.Space.Transform.MatrixTransform where
 
 import Control.Applicative (Applicative (..))
+import Control.Monad (liftM)
 
-import Geometry.Space.Vector3
-import Geometry.Space.Vector4
-import Geometry.Space.Matrix3x3
-import Geometry.Space.Matrix4x4
-import Geometry.Space.Operations
+import Geometry.Space.Types
+import Geometry.Space.Quaternion
+import Geometry.Space.ScalarOperations
+import Geometry.Space.ScalarTensorOperations
 import Geometry.Space.TensorOperations
 
 import Geometry.Space.Transform
 
+-- | SpaceTransform via standard transformation matrices (homogeneous coordinates)
 data MTransform t a = MTransform (Matrix4x4 t) a
     deriving (Eq, Ord, Bounded, Show, Read)
 
@@ -39,7 +41,7 @@ instance (Floating t, Eq t) => Monad (MTransform t) where
     (MTransform m x) >>= f = MTransform (m `prod` m') y
         where MTransform m' y = f x
 
-instance SpaceTransform MTransform where
+instance (Eq t, Floating t) => SpaceTransform (MTransform t) t where
     rotate v a = MTransform (rotateM v a)
     rotateX = MTransform . rotateXM
     rotateY = MTransform . rotateYM
@@ -49,7 +51,7 @@ instance SpaceTransform MTransform where
                                     0 0 c 0
                                     0 0 0 1)
     translate = MTransform . translateM
-    rotateScale = MTransform . toMatrix4x4
+    rotateScale = MTransform . fromQuaternion
     applyV3 (MTransform m (Vector3 x y z)) = Vector3 (x'/c) (y'/c) (z'/c)
         where Vector4 x' y' z' c = m `prod` Vector4 x y z 1
     applyV4 (MTransform m v) = m `prod` v
@@ -63,8 +65,8 @@ instance SpaceTransform MTransform where
     transformM4 = MTransform
     unwrap (MTransform _ v) = v
     wrap = MTransform eye
-
-
+    mapTransform (MTransform m t) = fmap (MTransform m) t
+    liftTransform (MTransform m t) = liftM (MTransform m) t
 
 
 -- | translation matrix
@@ -142,15 +144,15 @@ rotateEulerM x y z = Matrix4x4
 --   NB: in our implementation quaternion rotation is assumed to be twice lesser than usual
 --   (@q = cos a + v * sin a@ instead of @a/2@)
 --   This means, rotation is @sqrt q * x * sqrt (conjugate q)@
-toMatrix4x4 :: (Eq a, Floating a)
-            => Quaternion a  -- ^ Quaternion of r
+fromQuaternion :: (Eq a, Floating a)
+               => Quaternion a  -- ^ Quaternion of r
             -> Matrix4x4 a
-toMatrix4x4 (Vector4 0 0 0 w) = Matrix4x4
+fromQuaternion (Vector4 0 0 0 w) = Matrix4x4
     w 0 0 0
     0 w 0 0
     0 0 w 0
     0 0 0 1
-toMatrix4x4 q@(Vector4 x y z w) = Matrix4x4
+fromQuaternion q@(Vector4 x y z w) = Matrix4x4
     (w + c1*x*x) (c1*x*y - z) (c1*x*z + y) 0
     (c1*x*y + z) (w + c1*y*y) (c1*y*z - x) 0
     (c1*x*z - y) (c1*y*z + x) (w + c1*z*z) 0
@@ -158,7 +160,8 @@ toMatrix4x4 q@(Vector4 x y z w) = Matrix4x4
         where c1 = 1 / (normL2 q + w)
 
 
-
+-- | Create a transform matrix so that applying it at camera on @Vector4 0 0 -1 0@ and @Vector4 0 0 0 1@  will make it looking at specified direction.
+--   Just the same as GluLookAt.
 lookAtMatrix :: Floating a
              => Vector3 a -- ^ The up direction, not necessary unit length or perpendicular to the view vector
              -> Vector3 a -- ^ The viewers position

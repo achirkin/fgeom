@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Transform.QuaternionTransform
@@ -15,15 +16,16 @@
 module Geometry.Space.Transform.QuaternionTransform where
 
 import Control.Applicative (Applicative (..))
+import Control.Monad (liftM)
 
-import Geometry.Space.Operations
-import Geometry.Space.Vector3
-import Geometry.Space.Vector4
-import Geometry.Space.Matrix3x3
-import Geometry.Space.Matrix4x4
+import Geometry.Space.Types
+import Geometry.Space.Quaternion
+import Geometry.Space.ScalarOperations
 
 import Geometry.Space.Transform
 
+-- | Space transform represented by Quaternion and Vector
+--   Supports only rotation, uniform scale, and translate
 data QTransform t a = QTransform (Quaternion t) (Vector3 t) a
     deriving (Eq, Ord, Bounded, Show, Read)
 
@@ -39,7 +41,7 @@ instance (Floating t, Eq t) => Monad (QTransform t) where
     (QTransform q v x) >>= f = QTransform (q * q') (rotScale q v' .+ v) y
         where QTransform q' v' y = f x
 
-instance SpaceTransform QTransform where
+instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
     rotate v a = QTransform (axisRotation v a) zeros
     rotateX a = QTransform (Vector4 (sin a) 0 0 (cos a)) zeros
     rotateY a = QTransform (Vector4 0 (sin a) 0 (cos a)) zeros
@@ -63,6 +65,9 @@ instance SpaceTransform QTransform where
                            x31 x32 x33) ()
     unwrap (QTransform _ _ x) = x
     wrap = QTransform (Vector4 0 0 0 1) zeros
+    mapTransform (QTransform q v t) = fmap (QTransform q v) t
+    liftTransform (QTransform q v t) = liftM (QTransform q v) t
+
 
 fromMatrix3x3 :: (Floating t, Eq t) => Matrix3x3 t -> Quaternion t
 fromMatrix3x3 (Matrix3x3 x11 x12 x13

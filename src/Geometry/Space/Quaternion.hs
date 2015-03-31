@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector4
@@ -13,84 +13,15 @@
 --
 --------------------------------------------------------------------------------
 
-module Geometry.Space.Vector4 where
+module Geometry.Space.Quaternion where
 
-import Control.Applicative ( Applicative(..) )
-import Control.Monad ( ap )
-import Data.Foldable ( Foldable(..) )
-import Data.Ix ( Ix )
-import Data.Traversable ( Traversable(..) )
-import Data.Typeable ( Typeable )
-import Foreign.Storable ( Storable(..) )
 
 import Data.Fixed as DF
 
-import Geometry.Space.StorableHelpers
-import Geometry.Space.Operations
-import Geometry.Space.Vector3
-
--- | 4D Vector
-data Vector4 a = Vector4 !a !a !a !a
-    deriving (Eq, Ord, Ix, Bounded, Show, Read, Typeable)
-
-
-
---------------------------------------------------------------------------------
--- Standard instances
---------------------------------------------------------------------------------
-
-instance Functor Vector4 where
-   fmap f (Vector4 x y z w) = Vector4 (f x) (f y) (f z) (f w)
-
-instance Applicative Vector4 where
-   pure a = Vector4 a a a a
-   Vector4 f g h e <*> Vector4 x y z w = Vector4 (f x) (g y) (h z) (e w)
-
-instance Foldable Vector4 where
-   foldr f a (Vector4 x y z w) = x `f ` (y `f ` (z `f` (w `f` a)))
-   foldl f a (Vector4 x y z w) = (((a `f` x) `f` y) `f` z) `f` w
-   foldr1 f (Vector4 x y z w) = x `f` (y `f` (z `f` w))
-   foldl1 f (Vector4 x y z w) = ((x `f` y) `f` z) `f` w
-
-instance Traversable Vector4 where
-   traverse f (Vector4 x y z w) = pure Vector4 <*> f x <*> f y <*> f z <*> f w
-   sequenceA (Vector4 x y z w) =  pure Vector4 <*> x <*> y <*> z <*> w
-   mapM f (Vector4 x y z w) = return Vector4 `ap` f x `ap` f y `ap` f z `ap` f w
-   sequence (Vector4 x y z w) = return Vector4 `ap` x `ap` y `ap` z `ap` w
-
-instance Storable a => Storable (Vector4 a) where
-   sizeOf ~(Vector4 x _ _ _) = 4 * sizeOf x
-   alignment ~(Vector4 x _ _ _) = alignment x
-   peek = peekApplicativeTraversable
-   poke = pokeFoldable
-
---------------------------------------------------------------------------------
--- Vector space operations
---------------------------------------------------------------------------------
-
-instance (Num t) => ScalarNum (Vector4 t) where
-    zeros = Vector4 0 0 0 0
-    ones = Vector4 1 1 1 1
-    (Vector4 a b c d) .+ (Vector4 p q r s) = Vector4 (a+p) (b+q) (c+r) (d+s)
-    (Vector4 a b c d) .- (Vector4 p q r s) = Vector4 (a-p) (b-q) (c-r) (d-s)
-    neg (Vector4 a b c d) = Vector4 (negate a) (negate b) (negate c) (negate d)
-    (Vector4 a b c d) .* (Vector4 p q r s) = Vector4 (a*p) (b*q) (c*r) (d*s)
-
-instance (Fractional t) => ScalarFractional (Vector4 t) where
-    (Vector4 a b c d) ./ (Vector4 p q r s) = Vector4 (a/p) (b/q) (c/r) (d*s)
-    invs (Vector4 a b c d) = Vector4 (recip a) (recip b) (recip c) (recip d)
-
-instance ScalarTensor Vector4 where
-    fromScalar x = Vector4 x x x x
-
-instance (Num t) => ScalarTensorNum (Vector4 t) t where
-    c ..* (Vector4 x y z w) = Vector4 (c*x) (c*y) (c*z) (c*w)
-    (Vector4 a b c d) .*. (Vector4 p q r s) = a*p + b*q + c*r + s*d
-    
-instance (Fractional t) => ScalarTensorFractional (Vector4 t) t where
-    (Vector4 x y z w) /.. c = Vector4 (x/c) (y/c) (z/c) (w/c)
-    c ../ (Vector4 x y z w) = Vector4 (c/x) (c/y) (c/z) (c/w)
-
+import Geometry.Space.Types
+import Geometry.Space.ScalarOperations
+import Geometry.Space.ScalarTensorOperations
+import Geometry.Space.TensorOperations (InvertableTensor(..))
 
 --------------------------------------------------------------------------------
 -- * Quaternions
@@ -100,6 +31,11 @@ instance (Fractional t) => ScalarTensorFractional (Vector4 t) t where
 --   where @w@ is an argument, and @x y z@ are components of a 3D vector
 type Quaternion = Vector4
 
+
+instance (Fractional t) => InvertableTensor (Quaternion t) where
+    p // q = qmult p . invert $ q
+    q \\ p = qmult (invert q) p
+    invert q = conjugate q /.. (q .*. q)
 
 --------------------------------------------------------------------------
 -- Quaternion operations
@@ -187,3 +123,4 @@ instance (Floating a) => Fractional (Quaternion a) where
     recip q = conjugate q /.. (q .*. q)
     p / q = qmult p . recip $ q
     fromRational r = Vector4 0 0 0 (fromRational r)
+ 

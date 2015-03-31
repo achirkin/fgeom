@@ -13,15 +13,12 @@
 --------------------------------------------------------------------------------
 module Geometry.Space ( module X ) where
 
-import Geometry.Space.Matrix2x2 as X
-import Geometry.Space.Matrix3x3 as X
-import Geometry.Space.Matrix4x4 as X
-import Geometry.Space.Vector2   as X
-import Geometry.Space.Vector3   as X
-import Geometry.Space.Vector4   as X
+import Geometry.Space.Types as X
 
-import Geometry.Space.Operations       as X
-import Geometry.Space.TensorOperations as X
+import Geometry.Space.ScalarOperations       as X
+import Geometry.Space.ScalarTensorOperations as X
+import Geometry.Space.TensorOperations       as X
+
 
 import Geometry.Space.Transform                     as X
 import Geometry.Space.Transform.MatrixTransform     as X

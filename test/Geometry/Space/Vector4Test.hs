@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
 module Geometry.Space.Vector4Test where
+
 import Geometry.Space
+import Geometry.Space.Quaternion
 
 
 import Test.Framework
