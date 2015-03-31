@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, FlexibleInstances #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix4x4
@@ -101,10 +101,9 @@ instance Storable a => Storable (Matrix4x4 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Matrix4x4 where
+instance (Num t) => ScalarNum (Matrix4x4 t) where
     zeros = Matrix4x4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
     ones = Matrix4x4 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-    fromScalar x = Matrix4x4 x x x x x x x x x x x x x x x x
     (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) .+ (Matrix4x4 y11 y12 y13 y14 y21 y22 y23 y24 y31 y32 y33 y34 y41 y42 y43 y44)
         = Matrix4x4 (x11+y11) (x12+y12) (x13+y13) (x14+y14) (x21+y21) (x22+y22) (x23+y23) (x24+y24) (x31+y31) (x32+y32) (x33+y33) (x34+y34) (x41+y41) (x42+y42) (x43+y43) (x44+y44)
     (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) .- (Matrix4x4 y11 y12 y13 y14 y21 y22 y23 y24 y31 y32 y33 y34 y41 y42 y43 y44)
@@ -113,18 +112,29 @@ instance ScalarAlgebra Matrix4x4 where
         = Matrix4x4 (negate x11) (negate x12) (negate x13) (negate x14) (negate x21) (negate x22) (negate x23) (negate x24) (negate x31) (negate x32) (negate x33) (negate x34) (negate x41) (negate x42) (negate x43) (negate x44)
     (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) .* (Matrix4x4 y11 y12 y13 y14 y21 y22 y23 y24 y31 y32 y33 y34 y41 y42 y43 y44)
         = Matrix4x4(x11*y11) (x12*y12) (x13*y13) (x14*y14) (x21*y21) (x22*y22) (x23*y23) (x24*y24) (x31*y31) (x32*y32) (x33*y33) (x34*y34) (x41*y41) (x42*y42) (x43*y43) (x44*y44)
+
+instance (Fractional t) => ScalarFractional (Matrix4x4 t) where
     (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) ./ (Matrix4x4 y11 y12 y13 y14 y21 y22 y23 y24 y31 y32 y33 y34 y41 y42 y43 y44)
         = Matrix4x4(x11/y11) (x12/y12) (x13/y13) (x14/y14) (x21/y21) (x22/y22) (x23/y23) (x24/y24) (x31/y31) (x32/y32) (x33/y33) (x34/y34) (x41/y41) (x42/y42) (x43/y43) (x44/y44)
     invs (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
         = Matrix4x4 (recip x11) (recip x12) (recip x13) (recip x14) (recip x21) (recip x22) (recip x23) (recip x24) (recip x31) (recip x32) (recip x33) (recip x34) (recip x41) (recip x42) (recip x43) (recip x44)
 
-instance ScalarVector Matrix4x4 where
+
+instance ScalarTensor Matrix4x4 where
+    fromScalar x = Matrix4x4 x x x x x x x x x x x x x x x x
+
+instance (Num t) => ScalarTensorNum (Matrix4x4 t) t where
     c ..* (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
         = Matrix4x4 (c*x11) (c*x12) (c*x13) (c*x14) (c*x21) (c*x22) (c*x23) (c*x24) (c*x31) (c*x32) (c*x33) (c*x34) (c*x41) (c*x42) (c*x43) (c*x44)
+    (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) .*. (Matrix4x4 y11 y12 y13 y14 y21 y22 y23 y24 y31 y32 y33 y34 y41 y42 y43 y44)
+        = x11*y11 + x12*y12 + x13*y13 + x14*y14 + x21*y21 + x22*y22 + x23*y23 + x24*y24 + x31*y31 + x32*y32 + x33*y33 + x34*y34 + x41*y41 + x42*y42 + x43*y43 + x44*y44
+    
+instance (Fractional t) => ScalarTensorFractional (Matrix4x4 t) t where
     (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) /.. c
         = Matrix4x4 (x11/c) (x12/c) (x13/c) (x14/c) (x21/c) (x22/c) (x23/c) (x24/c) (x31/c) (x32/c) (x33/c) (x34/c) (x41/c) (x42/c) (x43/c) (x44/c)
     c ../ (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)
         = Matrix4x4 (c/x11) (c/x12) (c/x13) (c/x14) (c/x21) (c/x22) (c/x23) (c/x24) (c/x31) (c/x32) (c/x33) (c/x34) (c/x41) (c/x42) (c/x43) (c/x44)
+
 
 instance Matrix Matrix4x4 where
     det (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) 

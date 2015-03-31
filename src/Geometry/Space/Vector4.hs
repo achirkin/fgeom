@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, TypeSynonymInstances #-}
+{-# LANGUAGE DeriveDataTypeable, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector4
@@ -68,24 +68,29 @@ instance Storable a => Storable (Vector4 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Vector4 where
+instance (Num t) => ScalarNum (Vector4 t) where
     zeros = Vector4 0 0 0 0
     ones = Vector4 1 1 1 1
-    fromScalar x = Vector4 x x x x
     (Vector4 a b c d) .+ (Vector4 p q r s) = Vector4 (a+p) (b+q) (c+r) (d+s)
     (Vector4 a b c d) .- (Vector4 p q r s) = Vector4 (a-p) (b-q) (c-r) (d-s)
     neg (Vector4 a b c d) = Vector4 (negate a) (negate b) (negate c) (negate d)
     (Vector4 a b c d) .* (Vector4 p q r s) = Vector4 (a*p) (b*q) (c*r) (d*s)
+
+instance (Fractional t) => ScalarFractional (Vector4 t) where
     (Vector4 a b c d) ./ (Vector4 p q r s) = Vector4 (a/p) (b/q) (c/r) (d*s)
     invs (Vector4 a b c d) = Vector4 (recip a) (recip b) (recip c) (recip d)
 
-instance ScalarVector Vector4 where
+instance ScalarTensor Vector4 where
+    fromScalar x = Vector4 x x x x
+
+instance (Num t) => ScalarTensorNum (Vector4 t) t where
     c ..* (Vector4 x y z w) = Vector4 (c*x) (c*y) (c*z) (c*w)
+    (Vector4 a b c d) .*. (Vector4 p q r s) = a*p + b*q + c*r + s*d
+    
+instance (Fractional t) => ScalarTensorFractional (Vector4 t) t where
     (Vector4 x y z w) /.. c = Vector4 (x/c) (y/c) (z/c) (w/c)
     c ../ (Vector4 x y z w) = Vector4 (c/x) (c/y) (c/z) (c/w)
 
-instance Vector Vector4 where
-    (Vector4 a b c d) .*. (Vector4 p q r s) = a*p + b*q + c*r + s*d
 
 --------------------------------------------------------------------------------
 -- * Quaternions
@@ -162,9 +167,6 @@ axisRotation v a = Vector4 x y z w
                         | otherwise         = v *.. (sin a' / normL2 v)
           w = cos a'
           a' = DF.mod' (a+pi) (2*pi) - pi
-
-
-
 
 --------------------------------------------------------------------------
 -- Standard class instances

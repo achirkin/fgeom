@@ -31,8 +31,11 @@ library
                     Geometry.Space.Transform.MatrixTransform,
                     Geometry.Space.Transform,
                     Geometry.Space.Transform.QuaternionTransform,
-                    Geometry.Space.Transform.TransformInterop
-  exposed-modules:   Geometry.Space
+                    Geometry.Space.Transform.TransformInterop,
+                    Geometry.Structure.Enumerable
+  exposed-modules:   
+                     Geometry.Space,
+                     Geometry.Structure
 
 test-suite VectorTests
   type:            exitcode-stdio-1.0

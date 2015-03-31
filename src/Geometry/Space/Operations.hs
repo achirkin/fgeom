@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Operations
@@ -21,78 +21,81 @@ module Geometry.Space.Operations where
 --------------------------------------------------------------------------------
 
 -- | Element-wise operations on types
-class ScalarAlgebra a where
+class ScalarNum a where
     -- | Identity element w.r.t. addition
-    zeros :: (Num t) => a t
+    zeros :: a
     -- | Identity element w.r.t. multiplication
-    ones :: (Num t) => a t
-    -- | Replicate scalar to make vector
-    fromScalar :: t -> a t
+    ones :: a
     -- | Point-wise addition
     infixl 6 .+
-    (.+) :: (Num t) => a t -> a t -> a t
+    (.+) :: a -> a -> a
     -- | Point-wise subtraction
     infixl 6 .-
-    (.-) :: (Num t) => a t -> a t -> a t
+    (.-) :: a -> a -> a
     -- | Point-wise multiplication
     infixl 7 .*
-    (.*) :: (Num t) => a t -> a t -> a t
-    -- | Point-wise devision
-    infixl 7 ./
-    (./) :: (Fractional t) => a t -> a t -> a t
+    (.*) :: a -> a -> a
     -- | Negate vector (i.e. each element)
     -- > neg x = zeros .- x 
-    neg  :: (Num t) => a t -> a t
+    neg  :: a -> a
+
+-- | Element-wise operations on types
+class ScalarFractional a where
+    -- | Point-wise devision
+    infixl 7 ./
+    (./) :: a -> a -> a
     -- | Inverse vector (i.e. each element)
     -- > invs x = ones ./ x
-    invs  :: (Fractional t) => a t -> a t
+    invs  :: a -> a
 
 --------------------------------------------------------------------------------
 -- * Vector-Scalar operations
 --------------------------------------------------------------------------------
 
 -- | Multiply and divide vectors by scalars
-class ScalarVector a where
+class ScalarTensor a where
+    -- | Replicate scalar to make vector or matrix
+    fromScalar :: x -> a x
+
+-- | Multiply vectors by scalars
+class (Num t) => ScalarTensorNum a t | a -> t where
     -- | Multiply vector by scalar
     infixl 7 ..*
-    (..*) :: (Num t) => t -> a t -> a t
+    (..*) :: t -> a -> a
     -- | Multiply vector by scalar
     infixl 7 *..
-    (*..) :: (Num t) => a t -> t -> a t
+    (*..) :: a -> t -> a
     (*..) = flip (..*)
-    -- | Divide vector by scalar 
-    infixl 7 /..
-    (/..) :: (Fractional t) => a t -> t -> a t
-    -- | Divide sclar by vector 
-    infixl 7 ../
-    (../) :: (Fractional t) => t -> a t -> a t
-
---------------------------------------------------------------------------------
--- * Generic vectors
---------------------------------------------------------------------------------
-
--- | Various vector operations
-class Vector a where
     -- | Scalar product is a sum of vectors' components products
     infixl 7 .*.
-    (.*.) :: (Num x) => a x -> a x -> x
+    (.*.) :: a -> a -> t
+
+-- | Divide vectors by scalars
+class (Fractional t) => ScalarTensorFractional a t | a -> t where
+    -- | Divide vector by scalar 
+    infixl 7 /..
+    (/..) :: a -> t -> a
+    -- | Divide sclar by vector 
+    infixl 7 ../
+    (../) :: t -> a -> a
 
 -- | Squared Euclidean norm of a vector (L2 norm) - a scalar product on itself.
-normL2Squared :: (Num t, Vector a) => a t -> t
+normL2Squared :: (Num t, ScalarTensorNum a t) => a -> t
 normL2Squared x = x.*.x
 
 -- | Euclidean norm of a vector (L2 norm) - a square root of a scalar product on itself.
-normL2 :: (Floating t, Vector a) => a t -> t
+normL2 :: (Floating t, ScalarTensorNum a t) => a -> t
 normL2 x = sqrt $ x.*.x
 
 -- | Take a unit vector
-unit :: (Floating t, Vector a, ScalarVector a) => a t -> a t
+unit :: (Floating t, ScalarTensorNum a t, ScalarTensorFractional a t) => a -> a
 unit x = x /.. normL2 x
 
 --------------------------------------------------------------------------------
--- * Matrices
+-- * Matrices only
 --------------------------------------------------------------------------------
 
+-- | Operations that are specific for matrices, but not for vectors
 class Matrix a where
     -- | determinant of a matrix
     det :: (Num x) => a x -> x
@@ -109,6 +112,7 @@ class Matrix a where
 -- * Matrix-Vector interoperation
 --------------------------------------------------------------------------------
 
-class MatrixVector m v where
+-- | Operations on pairs vector-matrix
+class MatrixVector m v | m -> v, v -> m where
     -- | Put vector values on the matrix diagonal
     diag :: (Num x) => v x -> m x

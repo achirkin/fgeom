@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector3
@@ -65,24 +65,28 @@ instance Storable a => Storable (Vector3 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Vector3 where
+instance (Num t) => ScalarNum (Vector3 t) where
     zeros = Vector3 0 0 0
     ones = Vector3 1 1 1
-    fromScalar x = Vector3 x x x
     (Vector3 a b c) .+ (Vector3 p q r) = Vector3 (a+p) (b+q) (c+r)
     (Vector3 a b c) .- (Vector3 p q r) = Vector3 (a-p) (b-q) (c-r)
     neg (Vector3 a b c) = Vector3 (negate a) (negate b) (negate c)
     (Vector3 a b c) .* (Vector3 p q r) = Vector3 (a*p) (b*q) (c*r)
+
+instance (Fractional t) => ScalarFractional (Vector3 t) where
     (Vector3 a b c) ./ (Vector3 p q r) = Vector3 (a/p) (b/q) (c/r)
     invs (Vector3 a b c) = Vector3 (recip a) (recip b) (recip c)
 
-instance ScalarVector Vector3 where
+instance ScalarTensor Vector3 where
+    fromScalar x = Vector3 x x x
+
+instance (Num t) => ScalarTensorNum (Vector3 t) t where
     c ..* (Vector3 x y z) = Vector3 (c*x) (c*y) (c*z)
+    (Vector3 a b c) .*. (Vector3 p q r) = a*p + b*q + c*r
+    
+instance (Fractional t) => ScalarTensorFractional (Vector3 t) t where 
     (Vector3 x y z) /.. c = Vector3 (x/c) (y/c) (z/c)
     c ../ (Vector3 x y z) = Vector3 (c/x) (c/y) (c/z)
-
-instance Vector Vector3 where
-    (Vector3 a b c) .*. (Vector3 p q r) = a*p + b*q + c*r
 
 
 --------------------------------------------------------------------------------

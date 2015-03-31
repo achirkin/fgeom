@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, MultiParamTypeClasses #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector2
@@ -65,24 +65,30 @@ instance Storable a => Storable (Vector2 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Vector2 where
+
+
+instance (Num t) => ScalarNum (Vector2 t) where
     zeros = Vector2 0 0
     ones = Vector2 1 1
-    fromScalar x = Vector2 x x
     (Vector2 a b) .+ (Vector2 p q) = Vector2 (a+p) (b+q)
     (Vector2 a b) .- (Vector2 p q) = Vector2 (a-p) (b-q)
     neg (Vector2 a b) = Vector2 (negate a) (negate b)
     (Vector2 a b) .* (Vector2 p q) = Vector2 (a*p) (b*q)
+
+instance (Fractional t) => ScalarFractional (Vector2 t) where
     (Vector2 a b) ./ (Vector2 p q) = Vector2 (a/p) (b/q)
     invs (Vector2 a b) = Vector2 (recip a) (recip b)
 
-instance ScalarVector Vector2 where
+instance ScalarTensor Vector2 where
+    fromScalar x = Vector2 x x
+
+instance (Num t) => ScalarTensorNum (Vector2 t) t where
     c ..* (Vector2 x y) = Vector2 (c*x) (c*y)
+    (Vector2 a b) .*. (Vector2 p q) = a*p + b*q
+    
+instance (Fractional t) => ScalarTensorFractional (Vector2 t) t where 
     (Vector2 x y) /.. c = Vector2 (x/c) (y/c)
     c ../ (Vector2 x y) = Vector2 (c/x) (c/y)
-
-instance Vector Vector2 where
-    (Vector2 a b) .*. (Vector2 p q) = a*p + b*q
 
 
 --------------------------------------------------------------------------------

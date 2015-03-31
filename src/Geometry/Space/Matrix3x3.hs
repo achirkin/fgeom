@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, FlexibleInstances #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix3x3
@@ -77,10 +77,9 @@ instance Storable a => Storable (Matrix3x3 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Matrix3x3 where
+instance (Num t) => ScalarNum (Matrix3x3 t) where
     zeros = Matrix3x3 0 0 0 0 0 0 0 0 0
     ones = Matrix3x3 1 1 1 1 1 1 1 1 1
-    fromScalar x = Matrix3x3 x x x x x x x x x
     (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) .+ (Matrix3x3 y11 y12 y13 y21 y22 y23 y31 y32 y33)
         = Matrix3x3 (x11+y11) (x12+y12) (x13+y13) (x21+y21) (x22+y22) (x23+y23) (x31+y31) (x32+y32) (x33+y33)
     (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) .- (Matrix3x3 y11 y12 y13 y21 y22 y23 y31 y32 y33)
@@ -89,18 +88,29 @@ instance ScalarAlgebra Matrix3x3 where
         = Matrix3x3 (negate x11) (negate x12) (negate x13) (negate x21) (negate x22) (negate x23) (negate x31) (negate x32) (negate x33)
     (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) .* (Matrix3x3 y11 y12 y13 y21 y22 y23 y31 y32 y33)
         = Matrix3x3(x11*y11) (x12*y12) (x13*y13) (x21*y21) (x22*y22) (x23*y23) (x31*y31) (x32*y32) (x33*y33)
+
+instance (Fractional t) => ScalarFractional (Matrix3x3 t) where
     (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) ./ (Matrix3x3 y11 y12 y13 y21 y22 y23 y31 y32 y33)
         = Matrix3x3(x11/y11) (x12/y12) (x13/y13) (x21/y21) (x22/y22) (x23/y23) (x31/y31) (x32/y32) (x33/y33)
     invs (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
         = Matrix3x3 (recip x11) (recip x12) (recip x13) (recip x21) (recip x22) (recip x23) (recip x31) (recip x32) (recip x33)
 
-instance ScalarVector Matrix3x3 where
+instance ScalarTensor Matrix3x3 where
+    fromScalar x = Matrix3x3 x x x x x x x x x
+
+instance (Num t) => ScalarTensorNum (Matrix3x3 t) t where
     c ..* (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
         = Matrix3x3 (c*x11) (c*x12) (c*x13) (c*x21) (c*x22) (c*x23) (c*x31) (c*x32) (c*x33)
+    (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) .*. (Matrix3x3 y11 y12 y13 y21 y22 y23 y31 y32 y33)
+        = x11*y11 + x12*y12 + x13*y13 + x21*y21 + x22*y22 + x23*y23 + x31*y31 + x32*y32 + x33*y33
+    
+instance (Fractional t) => ScalarTensorFractional (Matrix3x3 t) t where
     (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) /.. c
         = Matrix3x3 (x11/c) (x12/c) (x13/c) (x21/c) (x22/c) (x23/c) (x31/c) (x32/c) (x33/c)
     c ../ (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
         = Matrix3x3 (c/x11) (c/x12) (c/x13) (c/x21) (c/x22) (c/x23) (c/x31) (c/x32) (c/x33)
+
+
 
 instance Matrix Matrix3x3 where
     det (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) 

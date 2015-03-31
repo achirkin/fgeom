@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, FlexibleInstances #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Matrix2x2
@@ -67,21 +67,29 @@ instance Storable a => Storable (Matrix2x2 a) where
 -- Vector space operations
 --------------------------------------------------------------------------------
 
-instance ScalarAlgebra Matrix2x2 where
+instance (Num t) => ScalarNum (Matrix2x2 t) where
     zeros = Matrix2x2 0 0 0 0
     ones = Matrix2x2 1 1 1 1
-    fromScalar x = Matrix2x2 x x x x
     (Matrix2x2 x11 x12 x21 x22) .+ (Matrix2x2 y11 y12 y21 y22) = Matrix2x2(x11+y11) (x12+y12) (x21+y21) (x22+y22)
     (Matrix2x2 x11 x12 x21 x22) .- (Matrix2x2 y11 y12 y21 y22) = Matrix2x2(x11-y11) (x12-y12) (x21-y21) (x22-y22)
     neg (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (negate x11) (negate x12) (negate x21) (negate x22)
     (Matrix2x2 x11 x12 x21 x22) .* (Matrix2x2 y11 y12 y21 y22) = Matrix2x2(x11*y11) (x12*y12) (x21*y21) (x22*y22)
+
+instance (Fractional t) => ScalarFractional (Matrix2x2 t) where
     (Matrix2x2 x11 x12 x21 x22) ./ (Matrix2x2 y11 y12 y21 y22) = Matrix2x2(x11/y11) (x12/y12) (x21/y21) (x22/y22)
     invs (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (recip x11) (recip x12) (recip x21) (recip x22)
 
-instance ScalarVector Matrix2x2 where
+instance ScalarTensor Matrix2x2 where
+    fromScalar x = Matrix2x2 x x x x
+
+instance (Num t) => ScalarTensorNum (Matrix2x2 t) t where
     c ..* (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (c*x11) (c*x12) (c*x21) (c*x22)
+    (Matrix2x2 x11 x12 x21 x22) .*. (Matrix2x2 y11 y12 y21 y22) = x11*y11 + x12*y12 + x21*y21 + x22*y22
+    
+instance (Fractional t) => ScalarTensorFractional (Matrix2x2 t) t where
     (Matrix2x2 x11 x12 x21 x22) /.. c = Matrix2x2 (x11/c) (x12/c) (x21/c) (x22/c)
     c ../ (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (c/x11) (c/x12) (c/x21) (c/x22)
+
 
 instance Matrix Matrix2x2 where
     det (Matrix2x2 x11 x12 x21 x22) = x11*x12 - x21*x22
