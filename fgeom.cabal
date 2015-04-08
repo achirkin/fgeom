@@ -1,53 +1,54 @@
-name:           fgeom
-version:        0.1.1
-cabal-version:  >= 1.18
-build-type:     Simple
-author:         Artem M. Chirkin <chirkin@arch.ethz.ch>
-stability:      Experimental
-maintainer:     Artem M. Chirkin <chirkin@arch.ethz.ch>
-description:    This package contains geometry types and functions to be used together with OpenGL
-homepage:       http://www.ia.arch.ethz.ch/chirkin/
-synopsis:       Functional-style geometry in 2D and 3D
-license:        BSD3
-category:       Math, Geometry
-license-file:   LICENSE
-copyright:      Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
+name: fgeom
+version: 0.1.1
+cabal-version: >=1.18
+build-type: Simple
+license: BSD3
+license-file: LICENSE
+copyright: Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
+maintainer: Artem M. Chirkin <chirkin@arch.ethz.ch>
+stability: Experimental
+homepage: http://www.ia.arch.ethz.ch/chirkin/
+synopsis: Functional-style geometry in 2D and 3D
+description: This package contains geometry types and functions to be used together with OpenGL
+category: Math, Geometry
+author: Artem M. Chirkin <chirkin@arch.ethz.ch>
 
 library
-  hs-source-dirs:    src
-  build-depends:     base >= 4 && < 5
-  ghc-options:       -Wall
-  default-language:  Haskell2010
-  other-modules:     
-                    Geometry.Space.ScalarOperations,
-                    Geometry.Space.ScalarTensorOperations,
-                    Geometry.Space.TensorOperations,
-                    Geometry.Space.Transform.MatrixTransform,
-                    Geometry.Space.Transform.QuaternionTransform,
-                    Geometry.Space.Transform.TransformInterop,
-                    Geometry.Space.Types
-  exposed-modules:   
-                     Geometry.Space,
-                     Geometry.Space.Quaternion,
+    build-depends: HTF >0.9 && <=1, base >=4 && <5
+    exposed-modules: Geometry.Space
+                     Geometry.Space.Quaternion
                      Geometry.Space.Transform
+    exposed: True
+    buildable: True
+    default-language: Haskell2010
+    hs-source-dirs: src
+    other-modules: Geometry.Space.ScalarOperations
+                   Geometry.Space.ScalarTensorOperations
+                   Geometry.Space.TensorOperations
+                   Geometry.Space.Types
+                   Geometry.Space.Transform.TransformInterop
+                   Geometry.Space.Transform.QuaternionTransform
+                   Geometry.Space.Transform.MatrixTransform
+                   Geometry.Algebra.Polynomial
+    ghc-options: -Wall
 
 test-suite VectorTests
-  type:            exitcode-stdio-1.0
-  main-is:         VectorTests.hs
-  ghc-options:     -Wall -rtsopts
-  default-language:  Haskell2010
-  build-depends:   base >= 4 && < 5, HTF > 0.9 && <= 1
-  other-modules:   
-                  Geometry.Space,
-                  Geometry.Space.Matrix2x2Test,
-                  Geometry.Space.Matrix3x3Test,
-                  Geometry.Space.Matrix4x4Test,
-                  Geometry.Space.Quaternion,
-                  Geometry.Space.Transform,
-                  Geometry.Space.Vector3Test,
-                  Geometry.Space.Vector4Test,
-                  Geometry.Space.VectorGenerators
-  hs-source-dirs:  
-                  test,
-                  src
+    build-depends: HTF >0.9 && <=1, base >=4 && <5
+    type: exitcode-stdio-1.0
+    main-is: VectorTests.hs
+    buildable: True
+    default-language: Haskell2010
+    hs-source-dirs: src test
+    other-modules: Geometry.Space
+                   Geometry.Space.Transform
+                   Geometry.Space.Quaternion
+                   Geometry.Space.Vector3Test
+                   Geometry.Space.Matrix4x4Test
+                   Geometry.Space.Matrix3x3Test
+                   Geometry.Space.Matrix2x2Test
+                   Geometry.Space.Vector4Test
+                   Geometry.Space.VectorGenerators
+                   Geometry.Algebra.Polynomial
+                   Geometry.Algebra.PolynomialTest
+    ghc-options: -Wall -rtsopts
 
