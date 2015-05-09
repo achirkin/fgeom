@@ -1,0 +1,295 @@
+--{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts #-}
+--{-# LANGUAGE TypeFamilies, RankNTypes #-}
+-------------------------------------------------------------------------------
+----
+---- Module      :  Geometry.Space.SetTensorOperations
+---- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
+---- License     :  BSD3
+----
+---- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
+---- Stability   :  Experimental
+---- Portability :
+----
+---- |
+----
+-------------------------------------------------------------------------------
+--
+module Geometry.Space.SetTensorOperations where
+--
+--import Data.Traversable
+--import Control.Applicative
+--
+--import Data.Ratio (Ratio)
+--import Foreign.C.Types
+--import Foreign.Ptr
+--import Data.Word
+--import Data.Int
+--import Data.Fixed
+--import Data.Complex
+--
+--import Geometry.Space.Types
+--
+--
+--class Vectorizeable a b | b -> a where
+--    unvectorize :: a -> b
+--    vectorize :: b -> a
+--
+--instance Vectorizeable (Scalar Int) Int where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Int8) Int8 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Int16) Int16 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Int32) Int32 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Int64) Int64 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Integer) Integer where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Word) Word where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Word8) Word8 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Word16) Word16 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Word32) Word32 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Word64) Word64 where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUIntMax) CUIntMax where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CIntMax) CIntMax where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUIntPtr) CUIntPtr where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CIntPtr) CIntPtr where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CSUSeconds) CSUSeconds where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUSeconds) CUSeconds where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CTime) CTime where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CClock) CClock where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CSigAtomic) CSigAtomic where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CWchar) CWchar where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CSize) CSize where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CPtrdiff) CPtrdiff where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CDouble) CDouble where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CFloat) CFloat where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CULLong) CULLong where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CLLong) CLLong where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CULong) CULong where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CLong) CLong where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUInt) CUInt where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CInt) CInt where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUShort) CUShort where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CShort) CShort where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CUChar) CUChar where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CSChar) CSChar where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar CChar) CChar where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar IntPtr) IntPtr where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar WordPtr) WordPtr where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Float) Float where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance Vectorizeable (Scalar Double) Double where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance (Integral a) => Vectorizeable (Scalar (Ratio a)) (Ratio a) where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance (RealFloat a) => Vectorizeable (Scalar (Complex a)) (Complex a) where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--instance (HasResolution a) => Vectorizeable (Scalar (Fixed a)) (Fixed a) where
+--    unvectorize (Scalar a) = a
+--    vectorize a = Scalar a
+--
+--
+--instance Vectorizeable (Scalar a) (Scalar a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--instance Vectorizeable (Vector2 a) (Vector2 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--
+--instance Vectorizeable (Vector3 a) (Vector3 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--
+--instance Vectorizeable (Vector4 a) (Vector4 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--
+--instance Vectorizeable (Matrix2x2 a) (Matrix2x2 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--
+--instance Vectorizeable (Matrix3x3 a) (Matrix3x3 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--instance Vectorizeable (Matrix4x4 a) (Matrix4x4 a) where
+--    vectorize = id
+--    unvectorize = id
+--
+--
+----type Scalar a = a -> a
+----data Scalar :: * -> * -- where { Scalar a :: a }
+------ where
+------    Scalar x = x
+----
+----type family TValue (c :: * -> * ) a
+----type instance TValue Scalar a = a
+------type instance TValue Scalar Double = Double
+------type instance TValue Scalar Int = Int
+----type instance TValue Vector2 (Vector2 a) = a
+------type instance TValue t (t a) = a
+----
+----class ( x ~ TValue c a
+----      , y ~ TValue c b)
+----      => TFunctor (c :: * -> * ) a b x y
+----        | a -> x, b -> y, a y -> b, b x -> a where
+----    tmap :: ( x -> y ) -> a -> b
+--
+----class TFunctor1 (c :: * -> * ) where
+----    tmap1 :: (TValue c a -> TValue c b) -> a -> b
+----
+------type EfficientSetLike a = (SetLike (EfficientSet a),Elem (EfficientSet a) ~ a)
+----
+----instance TFunctor1 Scalar where
+----    tmap1 f x = f x
+----
+----instance TFunctor1 Vector2 where
+----    tmap1 f x = fmap f x
+--
+---- (TValue Scalar x ~ x, TValue Scalar y ~ y) =>
+----instance (x ~ TValue Scalar x,  y ~ TValue Scalar y) => TFunctor Scalar x y x y where
+----    tmap f x = f x
+--
+----instance (x ~ TValue Vector2 (Vector2 x),  y ~ TValue Vector2 (Vector2 y))
+----        => TFunctor Vector2 (Vector2 x) (Vector2 y) x y where
+----    tmap = fmap
+--
+--
+----instance ( Functor t, y ~ TValue t (t y), x ~ TValue t (t x)
+----         , t y ~ t (TValue t (t y)), t x ~ t (TValue t (t x)))
+----         => TFunc t (t x) (t y) where
+----    tmap f xs = fmap f xs
+--
+--
+---- | Array of vectors into Vector of arrays
+--class (Traversable t) => SplitableTensor a b t | a b -> t, a t -> b where
+--    splitUp :: t a -> b
+--
+--
+--instance (Traversable t, Applicative v) => SplitableTensor (v x) (v (t x)) t where
+--    splitUp = sequenceA
+--
+--instance (Traversable t) => SplitableTensor Int (Scalar (t Int)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Int8 (Scalar (t Int8)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Int16 (Scalar (t Int16)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Int32 (Scalar (t Int32)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Int64 (Scalar (t Int64)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Integer (Scalar (t Integer)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Word (Scalar (t Word)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Word8 (Scalar (t Word8)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Word16 (Scalar (t Word16)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Word32 (Scalar (t Word32)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Word64 (Scalar (t Word64)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUIntMax (Scalar (t CUIntMax)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CIntMax (Scalar (t CIntMax)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUIntPtr (Scalar (t CUIntPtr)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CIntPtr (Scalar (t CIntPtr)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CSUSeconds (Scalar (t CSUSeconds)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUSeconds (Scalar (t CUSeconds)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CTime (Scalar (t CTime)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CClock (Scalar (t CClock)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CSigAtomic (Scalar (t CSigAtomic)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CWchar (Scalar (t CWchar)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CSize (Scalar (t CSize)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CPtrdiff (Scalar (t CPtrdiff)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CDouble (Scalar (t CDouble)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CFloat (Scalar (t CFloat)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CULLong (Scalar (t CULLong)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CLLong (Scalar (t CLLong)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CULong (Scalar (t CULong)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CLong (Scalar (t CLong)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUInt (Scalar (t CUInt)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CInt (Scalar (t CInt)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUShort (Scalar (t CUShort)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CShort (Scalar (t CShort)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CUChar (Scalar (t CUChar)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CSChar (Scalar (t CSChar)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor CChar (Scalar (t CChar)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor IntPtr (Scalar (t IntPtr)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor WordPtr (Scalar (t WordPtr)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Float (Scalar (t Float)) t where splitUp = pure
+--instance (Traversable t) => SplitableTensor Double (Scalar (t Double)) t where splitUp = pure
+--instance (Integral a, Traversable t) => SplitableTensor (Ratio a) (t (Ratio a)) t where splitUp = id
+--instance (RealFloat a, Traversable t) => SplitableTensor (Complex a) (t (Complex a)) t where splitUp = id
+--instance (HasResolution a,Traversable t) => SplitableTensor (Fixed a) (t (Fixed a)) t where splitUp = id

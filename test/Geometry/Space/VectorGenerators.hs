@@ -20,3 +20,11 @@ import Data.Traversable as T
 -- | this generates data for all kinds of vectors in OpenGL at once!
 instance (Arbitrary a, Applicative t, Traversable t) => Arbitrary (t a) where
     arbitrary = T.sequence $ A.pure arbitrary
+
+--
+-- arbitrary returns a generator of random numbers of given type a
+-- A.pure :: a -> f a
+-- A.pure - function of class Applicative, says: "repeat the same function
+--          for each element of Applicative", in our case - for each element of a vector
+-- T.sequence :: Monad m -> t (m a) -> m (t a)
+-- T.sequence - apply the monad inside Traversable

@@ -1,7 +1,23 @@
-module Geometry.Algebra.Polynomial where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Geometry.Math.Polynomial
+-- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
+-- License     :  BSD3
+--
+-- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
+-- Stability   :  Experimental
+-- Portability :  portable
+--
+-- | A few methods on polynomials (mainly for evaluating the roots of a polynomial equation)
+--
+-----------------------------------------------------------------------------
+
+module Geometry.Math.Polynomial (
+    polyRootReal,polyDerivative, polyIntegral, polySum, polyDiv, polyProd, polyValue
+    ) where
 
 import Data.List (foldl', foldl1', sort)
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, isNothing)
 
 precision :: (RealFloat a) => a
 precision = 1e-15
@@ -17,13 +33,13 @@ polyRootReal (0:cs) = 0 : polyRootReal cs
 polyRootReal coefs | noNaN = zeroroots . reverse . fixpoly . reverse . fixcoefs $ coefs'
                    | otherwise = []
     where fixpoly (0:xs) = fixpoly xs
-          fixpoly (x:xs) = 1 : map (\a -> a/x) xs
+          fixpoly (x:xs) = 1 : map (/x) xs
           fixpoly [] = []
           zeroroots (0:xs) = 0 : zeroroots xs
           zeroroots [] = []
           zeroroots xs = map (scaleFloat me) $ polyRootReal' xs
           fixcoefs = map (\x -> if abs x < precision then 0 else x)
-          noNaN = all (\x -> isNaN x == False) coefs
+          noNaN = all (not . isNaN) coefs
           (coefs',me) = normalizeRoots coefs
 
 -- | Makes all coefficients more or less same by apply @scaleFloat@ (multiplying by some factor of 2).
@@ -33,10 +49,10 @@ normalizeRoots [] = ([],0)
 normalizeRoots [a] = ([a],0)
 normalizeRoots as = (zipWith (flip scaleFloat) as $ iterate (me+) multFactor,me)
     where numeratedDifs = diffs . filter ((0/=) . fst) $ zip as ([0..] :: [Int])
-          me = let e = median $ numeratedDifs in if e > 0 then e-1 else e
+          me = let e = median numeratedDifs in if e > 0 then e-1 else e
           diffs ((a,i):xs) = map (\(b,j) -> div (exponent a - exponent b) (j-i)) xs ++ diffs xs
           diffs [] = []
-          median xs = let l = length xs in if l == 0 then 0 else (sort xs !! div l 2)
+          median xs = let l = length xs in if l == 0 then 0 else sort xs !! div l 2
           multFactor = negate . foldl1' max . map (\(x,y) -> exponent x + y) . filter ((0/=) . fst) . zip as $ iterate (me+) 0
 
 
@@ -62,7 +78,7 @@ polyRootReal' [d,c,b,_]
           v = b*b / 9 - c/3
           dd = u * u - v * v * v
           shift x = x - b / 3
-          q23 = signum v * (abs v) ** (1 / 3)
+          q23 = signum v * abs v ** (1 / 3)
           d1 = u + sqrt dd
           d2 = u - sqrt dd
           arg = atan2 (sqrt . abs $ dd) u
@@ -83,8 +99,8 @@ polyRootReal' [e,d,c,b,_]
     | otherwise = ss >>= (\s -> map shift $
         let v1 = -ss' - 2*p + q/s
             v2 = -ss' - 2*p - q/s
-            vv1 = if v1 > 0 then [0.5*sqrt v1] else []
-            vv2 = if v2 > 0 then [0.5*sqrt v2] else []
+            vv1 = [0.5*sqrt v1 | v1 > 0]
+            vv2 = [0.5*sqrt v2 | v2 > 0]
         in (vv1 >>= (\v -> map (-s +) [-v, v])) ++ (vv2 >>= (\v -> map (s +) [-v, v])))
     where p = c - 0.375*b*b
           q = b*b*b/8 - b*c/2 + d
@@ -111,9 +127,9 @@ polyRootReal' p = maybeToList xx >>= \x -> x : polyRootReal (fst $ polyDiv p [-x
           x0' = -lower * signum (polyValue (polyDerivative p) lower)
           x1' = upper * signum lower
           pf = polyValue p
-          signBounds = if r == Nothing then findChangingSign pf 1000 (-x1') (-x0') else r
-            where r = findChangingSign pf 1000 x0' x1'
-          x0 = signBounds >>= (\(l,u) -> return . fst $ approxRootBisecting pf 100 l u)
+          signBounds = if isNothing r then findChangingSign pf maxIterations (-x1') (-x0') else r
+            where r = findChangingSign pf maxIterations x0' x1'
+          x0 = signBounds >>= (\(l,u) -> return . fst $ approxRootBisecting pf (div maxIterations 10) l u)
           xx = f 0 x0
           f i (Just xn) | i >= maxIterations = Nothing
                         | abs dx < condition = Just (xn+dx)
@@ -153,7 +169,7 @@ findChangingSign :: (Enum a, RealFloat a)
                  -> a -- ^ lower bound
                  -> a -- ^ upper bound
                  -> Maybe (a,a) -- ^ refined bounds
-findChangingSign f n l u = if fl*(f u) <= 0 then Just (l,u) else approx' xs'
+findChangingSign f n l u = if fl * f u <= 0 then Just (l,u) else approx' xs'
     where fl = f l
           xs' = (l:) . take n . map ((l+) . ((u-l)*)) $ iterate (2*) 1 >>= \i -> map ((/i) . (0.5+)) [0..i-1]
           approx' [_] = Nothing

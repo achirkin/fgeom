@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Transform.QuaternionTransform
@@ -20,7 +20,7 @@ import Control.Monad (liftM)
 
 import Geometry.Space.Types
 import Geometry.Space.Quaternion
-import Geometry.Space.ScalarOperations
+import Geometry.Space.Tensor
 
 import Geometry.Space.Transform
 
@@ -33,21 +33,21 @@ instance Functor (QTransform t) where
     fmap f (QTransform q v x) = QTransform q v (f x)
 
 instance (Floating t, Eq t) => Applicative (QTransform t) where
-    pure = QTransform (Vector4 0 0 0 1) zeros
+    pure = QTransform 1 zeros
     QTransform qf vf f <*> QTransform qx vx x = QTransform (qf * qx) (rotScale qf vx .+ vf) (f x)
 
 instance (Floating t, Eq t) => Monad (QTransform t) where
-    return = QTransform (Vector4 0 0 0 1) zeros
+    return = QTransform 1 zeros
     (QTransform q v x) >>= f = QTransform (q * q') (rotScale q v' .+ v) y
         where QTransform q' v' y = f x
 
 instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
     rotate v a = QTransform (axisRotation v a) zeros
-    rotateX a = QTransform (Vector4 (sin a) 0 0 (cos a)) zeros
-    rotateY a = QTransform (Vector4 0 (sin a) 0 (cos a)) zeros
-    rotateZ a = QTransform (Vector4 0 0 (sin a) (cos a)) zeros
-    scale c = QTransform (Vector4 0 0 0 c) zeros
-    translate = QTransform (Vector4 0 0 0 1)
+    rotateX a = QTransform (Q (sin a) 0 0 (cos a)) zeros
+    rotateY a = QTransform (Q 0 (sin a) 0 (cos a)) zeros
+    rotateZ a = QTransform (Q 0 0 (sin a) (cos a)) zeros
+    scale c = QTransform (Q 0 0 0 c) zeros
+    translate = QTransform 1
     rotateScale q = QTransform q zeros
     applyV3 (QTransform q v x) = rotScale q x .+ v
     applyV4 (QTransform q _ (Vector4 x y z 0)) = Vector4 x' y' z' 0
@@ -64,12 +64,12 @@ instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
                            x21 x22 x23
                            x31 x32 x33) ()
     unwrap (QTransform _ _ x) = x
-    wrap = QTransform (Vector4 0 0 0 1) zeros
+    wrap = QTransform (Q 0 0 0 1) zeros
     mapTransform (QTransform q v t) = fmap (QTransform q v) t
     liftTransform (QTransform q v t) = liftM (QTransform q v) t
 
 
-fromMatrix3x3 :: (Floating t, Eq t) => Matrix3x3 t -> Quaternion t
+fromMatrix3x3 :: (Floating t, Eq t) => Tensor 3 3 t -> Quaternion t
 fromMatrix3x3 (Matrix3x3 x11 x12 x13
                          x21 x22 x23
                          x31 x32 x33) = let x = (x32 - x23)/2
@@ -78,10 +78,10 @@ fromMatrix3x3 (Matrix3x3 x11 x12 x13
                                             tr = x11 + x22 + x33
                                             m = x*x + y*y + z*z
         in if m == 0
-        then Vector4 0 0 0 (tr/3)
-        else Vector4 x y z ((2*tr - sqrt (tr*tr + 3*m))/3)
+        then Q 0 0 0 (tr/3)
+        else Q x y z ((2*tr - sqrt (tr*tr + 3*m))/3)
 
-fromMatrix4x4 :: (Floating t, Eq t) => Matrix4x4 t -> Quaternion t
+fromMatrix4x4 :: (Floating t, Eq t) => Tensor 4 4 t -> Quaternion t
 fromMatrix4x4 (Matrix4x4 x11 x12 x13  _ 
                          x21 x22 x23  _
                          x31 x32 x33  _

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.MatrixTransform
@@ -19,14 +19,12 @@ import Control.Monad (liftM)
 
 import Geometry.Space.Types
 import Geometry.Space.Quaternion
-import Geometry.Space.ScalarOperations
-import Geometry.Space.ScalarTensorOperations
-import Geometry.Space.TensorOperations
+import Geometry.Space.Tensor
 
 import Geometry.Space.Transform
 
 -- | SpaceTransform via standard transformation matrices (homogeneous coordinates)
-data MTransform t a = MTransform (Matrix4x4 t) a
+data MTransform t a = MTransform (Tensor 4 4 t) a
     deriving (Eq, Ord, Bounded, Show, Read)
 
 instance Functor (MTransform t) where
@@ -70,7 +68,7 @@ instance (Eq t, Floating t) => SpaceTransform (MTransform t) t where
 
 
 -- | translation matrix
-translateM :: Num a => Vector3 a -> Matrix4x4 a
+translateM :: Num a => Vector 3 a -> Tensor 4 4 a
 translateM (Vector3 x y z) = Matrix4x4
     1 0 0 x
     0 1 0 y
@@ -80,7 +78,7 @@ translateM (Vector3 x y z) = Matrix4x4
 -- | Rotation matrix for a rotation around the X axis
 rotateXM :: Floating a
           => a -- ^ The angle in radians
-          -> Matrix4x4 a
+          -> Tensor 4 4 a
 rotateXM a = Matrix4x4
     1      0        0  0
     0 (cos a) (-sin a) 0
@@ -90,7 +88,7 @@ rotateXM a = Matrix4x4
 -- | Rotation matrix for a rotation around the Y axis
 rotateYM :: Floating a
           => a -- ^ The angle in radians
-          -> Matrix4x4 a
+          -> Tensor 4 4 a
 rotateYM a = Matrix4x4
     ( cos a)  0 (sin a) 0
           0   1      0  0
@@ -101,7 +99,7 @@ rotateYM a = Matrix4x4
 -- | Rotation matrix for a rotation around the Z axis
 rotateZM :: Floating a
           => a -- ^ The angle in radians
-          -> Matrix4x4 a
+          -> Tensor 4 4 a
 rotateZM a  = Matrix4x4
     (cos a) (-sin a) 0 0
     (sin a) ( cos a) 0 0
@@ -110,9 +108,9 @@ rotateZM a  = Matrix4x4
 
 -- | Rotation matrix for a rotation around an arbitrary normalized vector
 rotateM :: Floating a
-            => Vector3 a  -- ^ The normalized vector around which the rotation goes
+            => Vector 3 a  -- ^ The normalized vector around which the rotation goes
             -> a  -- ^ The angle in radians
-            -> Matrix4x4 a
+            -> Tensor 4 4 a
 rotateM (Vector3 x y z) a = Matrix4x4
     (  c + c1*x*x) (c1*x*y - s*z) (c1*x*z + s*y) 0
     (c1*x*y + s*z) (  c + c1*y*y) (c1*y*z - s*x) 0
@@ -127,7 +125,7 @@ rotateEulerM :: Floating a
               => a -- ^ 
               -> a -- ^ 
               -> a -- ^
-              -> Matrix4x4 a
+              -> Tensor 4 4 a
 rotateEulerM x y z = Matrix4x4
     ( cy*cz) (cx*sz + sx*sy*cz) (sx*sz - cx*sy*cz) 0
     (-cy*sz) (cx*cz - sx*sy*sz) (sx*cz + cx*sy*sz) 0
@@ -146,27 +144,27 @@ rotateEulerM x y z = Matrix4x4
 --   This means, rotation is @sqrt q * x * sqrt (conjugate q)@
 fromQuaternion :: (Eq a, Floating a)
                => Quaternion a  -- ^ Quaternion of r
-            -> Matrix4x4 a
-fromQuaternion (Vector4 0 0 0 w) = Matrix4x4
+               -> Tensor 4 4 a
+fromQuaternion (Q 0 0 0 w) = Matrix4x4
     w 0 0 0
     0 w 0 0
     0 0 w 0
     0 0 0 1
-fromQuaternion q@(Vector4 x y z w) = Matrix4x4
+fromQuaternion q@(Q x y z w) = Matrix4x4
     (w + c1*x*x) (c1*x*y - z) (c1*x*z + y) 0
     (c1*x*y + z) (w + c1*y*y) (c1*y*z - x) 0
     (c1*x*z - y) (c1*y*z + x) (w + c1*z*z) 0
      0              0              0       1
-        where c1 = 1 / (normL2 q + w)
+        where c1 = 1 / (sqrt (square q) + w)
 
 
--- | Create a transform matrix so that applying it at camera on @Vector4 0 0 -1 0@ and @Vector4 0 0 0 1@  will make it looking at specified direction.
+-- | Create a transform matrix so that applying it at camera on @Q 0 0 -1 0@ and @Q 0 0 0 1@  will make it looking at specified direction.
 --   Just the same as GluLookAt.
 lookAtMatrix :: Floating a
-             => Vector3 a -- ^ The up direction, not necessary unit length or perpendicular to the view vector
-             -> Vector3 a -- ^ The viewers position
-             -> Vector3 a -- ^ The point to look at
-             -> Matrix4x4 a
+             => Vector 3 a -- ^ The up direction, not necessary unit length or perpendicular to the view vector
+             -> Vector 3 a -- ^ The viewers position
+             -> Vector 3 a -- ^ The point to look at
+             -> Tensor 4 4 a
 lookAtMatrix up camera point = Matrix4x4 
     xx xy xz (-xDir .*. camera)
     yx yy yz (-yDir .*. camera)
@@ -183,7 +181,7 @@ perspective :: Floating a
             -> a -- ^ Far plane clipping distance (always positive)
             -> a -- ^ Field of view of the y axis, in radians
             -> a -- ^ Aspect ratio, i.e. screen's width\/height
-            -> Matrix4x4 a
+            -> Tensor 4 4 a
 perspective n f fovy aspect = Matrix4x4
     (n/w2) 0       0           0
      0    (n/h2)   0           0
@@ -199,7 +197,7 @@ orthogonal :: Fractional a
            -> a -- ^ Far plane clipping distance
            -> a -- ^ width
            -> a -- ^ height
-           -> Matrix4x4 a
+           -> Tensor 4 4 a
 orthogonal n f w h = Matrix4x4
    (2/w) 0    0           0
     0   (2/h) 0           0

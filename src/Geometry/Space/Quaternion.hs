@@ -1,4 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE AutoDeriveTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector4
@@ -15,13 +18,15 @@
 
 module Geometry.Space.Quaternion where
 
+import Data.Typeable
+import Data.Data (Data)
+import Foreign (Storable, castPtr, peek, poke, pokeElemOff, peekElemOff, sizeOf,
+                alignment)
 
 import Data.Fixed as DF
 
 import Geometry.Space.Types
-import Geometry.Space.ScalarOperations
-import Geometry.Space.ScalarTensorOperations
-import Geometry.Space.TensorOperations (InvertableTensor(..))
+import Geometry.Space.Tensor
 
 --------------------------------------------------------------------------------
 -- * Quaternions
@@ -29,58 +34,67 @@ import Geometry.Space.TensorOperations (InvertableTensor(..))
 
 -- | Quaternion data type. The ordering of coordinates is @x y z w@,
 --   where @w@ is an argument, and @x y z@ are components of a 3D vector
-type Quaternion = Vector4
-
-
-instance (Fractional t) => InvertableTensor (Quaternion t) where
-    p // q = qmult p . invert $ q
-    q \\ p = qmult (invert q) p
-    invert q = conjugate q /.. (q .*. q)
+data Quaternion x = Q !x !x !x !x
+    deriving (Eq, Ord, Bounded, Show, Read, Data, Typeable)
 
 --------------------------------------------------------------------------
 -- Quaternion operations
 --------------------------------------------------------------------------
 
+-- | Get scalar square of the quaternion
+square :: (Num a) => Quaternion a -> a
+{-# SPECIALISE INLINE square :: Quaternion Double -> Double #-}
+{-# SPECIALISE INLINE square :: Quaternion Float -> Float #-}
+square (Q x y z t) = x*x + y*y + z*z + t*t
+
 -- | Imagine part of quaternion (orientation vector)
-im :: Quaternion a -> Vector3 a
-im (Vector4 b c d _) = Vector3 b c d
+im :: (Num a) => Quaternion a -> Quaternion a
+{-# SPECIALISE INLINE im :: Quaternion Double -> Quaternion Double #-}
+{-# SPECIALISE INLINE im :: Quaternion Float -> Quaternion Float #-}
+im (Q b c d _) = Q b c d 0
 
 -- | Real part of the quaternion
-re :: Quaternion a -> a
-re (Vector4 _ _ _ a) = a
+re :: (Num a) => Quaternion a -> Quaternion a
+{-# SPECIALISE INLINE re :: Quaternion Double -> Quaternion Double #-}
+{-# SPECIALISE INLINE re :: Quaternion Float -> Quaternion Float #-}
+re (Q _ _ _ a) = Q 0 0 0 a
+
+-- | Get imagenery 3D vector of the quaternion
+imVec :: Quaternion a -> Vector3 a
+imVec (Q b c d _) = Vector3 b c d
+
+-- | Real part of the quaternion into number
+taker :: Quaternion a -> a
+taker (Q _ _ _ a) = a
 
 -- | i-th component
 takei :: Quaternion a -> a
-takei (Vector4 b _ _ _) = b
+takei (Q b _ _ _) = b
 
 -- | j-th component
 takej :: Quaternion a -> a
-takej (Vector4 _ c _ _) = c
+takej (Q _ c _ _) = c
 
 -- | k-th component
 takek :: Quaternion a -> a
-takek (Vector4 _ _ d _) = d
+takek (Q _ _ d _) = d
 
 -- | Conjugate quaternion (negate imaginary part)
 conjugate :: (Num a) => Quaternion a -> Quaternion a
-conjugate (Vector4 b c d a) = Vector4 (negate b) (negate c) (negate d) a
-
--- | Quaternion multiplication
-qmult :: (Num a) => Quaternion a -> Quaternion a -> Quaternion a
-qmult (Vector4 b c d a) (Vector4 q r s p) = Vector4
-    (a*q + b*p + c*s - d*r)
-    (a*r - b*s + c*p + d*q)
-    (a*s + b*r - c*q + d*p)
-    (a*p - b*q - c*r - d*s)
+{-# SPECIALISE INLINE conjugate :: Quaternion Double -> Quaternion Double #-}
+{-# SPECIALISE INLINE conjugate :: Quaternion Float -> Quaternion Float #-}
+conjugate (Q b c d a) = Q (negate b) (negate c) (negate d) a
 
 
 -- | Rotates vector in 3D using versor (unit quaternion).
 --   Let @q = (cos a, sin a * v)@; then rotation angle is @a@, and axis of rotation is @v@.
 --   this is equivalent to sqrt q * x * (sqrt $ conjugate q)
 rotScale :: (Floating a, Eq a) => Quaternion a -> Vector3 a -> Vector3 a
+{-# SPECIALISE INLINE rotScale :: Quaternion Double -> Vector3 Double -> Vector3 Double #-}
+{-# SPECIALISE INLINE rotScale :: Quaternion Float -> Vector3 Float -> Vector3 Float #-}
 rotScale _ p@(Vector3 0 0 0) = p
-rotScale (Vector4 0 0 0 t) v = v *.. t
-rotScale (Vector4 i j k t) (Vector3 a b c) =
+rotScale (Q 0 0 0 t) (Vector3 a b c) = Vector3 (a*t) (b*t) (c*t)
+rotScale (Q i j k t) (Vector3 a b c) =
     let dot = ( a*i + b*j + c*k ) / (len + t)
         len = sqrt $ i*i + j*j + k*k + t*t
     in Vector3
@@ -91,13 +105,17 @@ rotScale (Vector4 i j k t) (Vector3 a b c) =
 -- | Creates a quaternion @q@ from two vectors @a@ and @b@.
 --   @rotScale q a == b@
 getRotScale :: (Fractional a) => Vector3 a -> Vector3 a -> Quaternion a
-getRotScale a b = Vector4 x y z (a' .*. b)
+{-# SPECIALISE INLINE getRotScale :: Vector3 Double -> Vector3 Double -> Quaternion Double #-}
+{-# SPECIALISE INLINE getRotScale :: Vector3 Float -> Vector3 Float -> Quaternion Float #-}
+getRotScale a b = Q x y z (a' .*. b)
     where Vector3 x y z = cross a' b
           a' = a /.. normL2Squared a
 
 -- | Creates a rotation versor from an axis vector and an angle in radians.
 axisRotation :: (Eq a, Floating a, Real a) => Vector3 a -> a -> Quaternion a
-axisRotation v a = Vector4 x y z w
+{-# SPECIALISE INLINE axisRotation :: Vector3 Double -> Double -> Quaternion Double #-}
+{-# SPECIALISE INLINE axisRotation :: Vector3 Float -> Float -> Quaternion Float #-}
+axisRotation v a = Q x y z w
     where Vector3 x y z | w == 1 || w == -1 = Vector3 0 0 0
                         | w == 0            = unit v
                         | otherwise         = v *.. (sin a' / normL2 v)
@@ -110,17 +128,112 @@ axisRotation v a = Vector4 x y z w
 
 -- | Quatertion is Numeric
 instance (Floating a) => Num (Quaternion a) where
-    (+)  = (.+)
-    (-) = (.-)
-    (*) = qmult
-    abs q = Vector4 0 0 0 (normL2 q)
-    signum q = q /.. normL2 q
-    negate = neg
-    fromInteger i = Vector4 0 0 0 (fromInteger i)
+    {-# SPECIALISE instance Num (Quaternion Float) #-}
+    {-# SPECIALISE instance Num (Quaternion Double) #-}
+    Q x1 x2 x3 x4 + Q y1 y2 y3 y4 = Q (x1+y1) (x2+y2) (x3+y3) (x4+y4)
+    Q x1 x2 x3 x4 - Q y1 y2 y3 y4 = Q (x1-y1) (x2-y2) (x3-y3) (x4-y4)
+    Q b c d a * Q q r s p = Q
+        (a*q + b*p + c*s - d*r)
+        (a*r - b*s + c*p + d*q)
+        (a*s + b*r - c*q + d*p)
+        (a*p - b*q - c*r - d*s)
+    abs q = Q 0 0 0 (square q)
+    signum q@(Q x y z t) = Q (x/l) (y/l) (z/l) (t/l) where l = sqrt $ square q
+    negate (Q x y z t) = Q (negate x) (negate y) (negate z) (negate t)
+    fromInteger i = Q 0 0 0 (fromInteger i)
 
 -- | Fractional is implemented using right-side division
 instance (Floating a) => Fractional (Quaternion a) where
-    recip q = conjugate q /.. (q .*. q)
-    p / q = qmult p . recip $ q
-    fromRational r = Vector4 0 0 0 (fromRational r)
- 
+    {-# SPECIALISE instance Fractional (Quaternion Float) #-}
+    {-# SPECIALISE instance Fractional (Quaternion Double) #-}
+    recip q@(Q x y z t) = Q (-x/l) (-y/l) (-z/l) (t/l) where l = square q
+    p / q = p * recip q
+    fromRational r = Q 0 0 0 (fromRational r)
+
+instance  (RealFloat a) => Floating (Quaternion a) where
+    {-# SPECIALISE instance Floating (Quaternion Float) #-}
+    {-# SPECIALISE instance Floating (Quaternion Double) #-}
+    pi = Q 0 0 0 pi
+    exp (Q 0 0 0 t) = Q 0 0 0 (exp t)
+    exp (Q x y z t) = Q (x*l) (y*l) (z*l) (et * cos mv)
+        where et = exp t
+              mv = sqrt (x*x + y*y + z*z)
+              l = et * sin mv / mv
+    log (Q 0 0 0 t) | t >= 0 = Q 0 0 0 (log t)
+                    | otherwise = Q pi 0 0 (log (-t))
+    log (Q x y z t) = Q (x*l) (y*l) (z*l) (log mq)
+        where mq = sqrt (x*x + y*y + z*z + t*t)
+              l = acos (t / mq) / sqrt (x*x + y*y + z*z)
+    sqrt (Q 0 0 0 t) | t >= 0 = Q 0 0 0 (sqrt t)
+                     | otherwise = Q (sqrt (-t)) 0 0 0
+    sqrt (Q x y z t) = Q (x*sina) (y*sina) (z*sina) (signum t * sqrt (0.5 + tq) * l2)
+        where l = sqrt (x*x + y*y + z*z + t*t)
+              l2 = sqrt l
+              tq = t / l / 2
+              sina = sqrt (0.5 - tq) / l2
+    sin (Q 0 0 0 t) = Q 0 0 0 (sin t)
+    sin (Q x y z t) = Q (x*l) (y*l) (z*l) (sin t * cosh mv)
+        where mv = sqrt (x*x + y*y + z*z)
+              l = cos t * sinh mv / mv
+    cos (Q 0 0 0 t) = Q 0 0 0 (cos t)
+    cos (Q x y z t) = Q (x*l) (y*l) (z*l) (cos t * cosh mv)
+        where mv = sqrt (x*x + y*y + z*z)
+              l = - sin t * sinh mv / mv
+    tan (Q 0 0 0 t) =  Q 0 0 0 (tan t)
+    tan (Q x y z t) =  Q (x*l) (y*l) (z*l) (sin (2*t) * cq / 2)
+        where mv = sqrt x*x + y*y + z*z
+              chv = cosh mv
+              shv = sinh mv
+              cq = recip . sqrt $ cos t ^ (2::Int) * chv * chv + sin t ^ (2::Int) * shv * shv
+              l = chv*shv/cq
+    sinh (Q 0 0 0 t) = Q 0 0 0 (sinh t)
+    sinh (Q x y z t) = Q (x*l) (y*l) (z*l) (sinh t * cos mv)
+        where mv = sqrt (x*x + y*y + z*z)
+              l = cosh t * sin mv / mv
+    cosh (Q 0 0 0 t) = Q 0 0 0 (cosh t)
+    cosh (Q x y z t) = Q (x*l) (y*l) (z*l) (cosh t * cos mv)
+        where mv = sqrt (x*x + y*y + z*z)
+              l = - sinh t * sin mv / mv
+    tanh (Q 0 0 0 t) =  Q 0 0 0 (tanh t)
+    tanh (Q x y z t) =  Q (x*l) (y*l) (z*l) (sinh (2*t) * cq / 2)
+        where mv = sqrt x*x + y*y + z*z
+              sinv = sin mv
+              cosv = cos mv
+              cq = recip . sqrt $ cosh t ^ (2::Int) * cosv * cosv + sinh t ^ (2::Int) * sinv * sinv
+              l = sinv*cosv/cq
+    asin (Q 0 0 0 t) = Q 0 0 0 (asin t)
+    asin q = -i * log (i*q + sqrt (1 - q*q))
+        where i = signum . im $ q
+    acos (Q 0 0 0 t) = Q 0 0 0 (acos t)
+    acos q = pi/2 - asin q
+    atan (Q 0 0 0 t) = Q 0 0 0 (atan t)
+    atan q = i/2 * (log (1 - iq) - log (1 + iq))
+        where i = signum . im $ q
+              iq = i*q
+    asinh (Q 0 0 0 t) = Q 0 0 0 (asinh t)
+    asinh q = log (q + sqrt (q*q + 1))
+    acosh (Q 0 0 0 t) = Q 0 0 0 (acosh t)
+    acosh q = log (q + sqrt (q*q - 1))
+    atanh (Q 0 0 0 t) = Q 0 0 0 (atanh t)
+    atanh q = 0.5 * log ((1+q)/(1-q))
+
+
+-- | Save quaternion, real part is last
+instance Storable a => Storable (Quaternion a) where
+    {-# SPECIALISE instance Storable (Quaternion Float) #-}
+    {-# SPECIALISE instance Storable (Quaternion Double) #-}
+    sizeOf (Q x _ _ _) = 4 * sizeOf x
+    alignment (Q x _ _ _) = alignment x
+    peek p = do
+        q <- return $ castPtr p
+        x <- peek q
+        y <- peekElemOff q 1
+        z <- peekElemOff q 2
+        t <- peekElemOff q 3
+        return $ Q x y z t
+    poke p (Q x y z t) = do
+        q <-return $  (castPtr p)
+        poke q x
+        pokeElemOff q 1 y
+        pokeElemOff q 2 z
+        pokeElemOff q 3 t

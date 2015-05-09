@@ -8,7 +8,7 @@ import Geometry.Space.VectorGenerators ()
 
 
 
-prop_inverse :: Matrix2x2 Double -> Bool
-prop_inverse a = (abs (det a) <= 1e-10) ||
+prop_inverse :: Matrix2x2 Double -> Property
+prop_inverse a = abs (det a) > 1e-10 ==>
     (  (abs (det (prod a (invert a) .- eye)) <= 1e-10)
     && (abs (det (prod (invert a) a .- eye)) <= 1e-10) )
