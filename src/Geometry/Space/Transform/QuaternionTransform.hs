@@ -67,6 +67,8 @@ instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
     wrap = QTransform (Q 0 0 0 1) zeros
     mapTransform (QTransform q v t) = fmap (QTransform q v) t
     liftTransform (QTransform q v t) = liftM (QTransform q v) t
+    transform tr (QTransform q v t) = fmap (\f -> f t) tr >>= translate v >>= rotateScale q
+    cotransform (QTransform q v f) = (<*>) $ wrap f >>= translate v >>= rotateScale q
 
 
 fromMatrix3x3 :: (Floating t, Eq t) => Tensor 3 3 t -> Quaternion t

@@ -12,11 +12,11 @@ import Geometry.Space.VectorGenerators ()
 -- testing units
 
 i :: Quaternion Double
-i = Vector4 1 0 0 0 :: Quaternion Double
+i = Q 1 0 0 0 :: Quaternion Double
 j :: Quaternion Double
-j = Vector4 0 1 0 0 :: Quaternion Double
+j = Q 0 1 0 0 :: Quaternion Double
 k :: Quaternion Double
-k = Vector4 0 0 1 0 :: Quaternion Double
+k = Q 0 0 1 0 :: Quaternion Double
 units :: [Quaternion Double]
 units = [1,i,j,k] :: [Quaternion Double]
 
@@ -30,7 +30,7 @@ test_unitMultiplication = do
     assertEqual [k,  j, -i, -1] $ mapM (flip (*)) units k
 
 prop_inverse :: Quaternion Double -> Bool
-prop_inverse a = (a == 0) || (invert a == 1 / a && 1 // a == a \\ 1 && normL2Squared (a * invert a - 1) < 1e-15)
+prop_inverse a = (a == 0) || (recip a == 1 / a && square (a * recip a - 1) < 1e-15)
 
 prop_fullRound :: Vector3 Double -> Vector3 Double -> Int -> Bool
 prop_fullRound (Vector3 0 0 0) _ _  = True
@@ -43,7 +43,7 @@ prop_fullRound axis v n = normL2Squared (result .- v) / normL2Squared v < 1e-15
 prop_rotScaling :: Quaternion Double -> Vector3 Double -> Bool
 prop_rotScaling q v = abs (result - p) <= 1e-10 * max p result
     where result = normL2Squared $ rotScale q v
-          p = normL2Squared v * normL2Squared q
+          p = normL2Squared v * square q
 
 prop_rotScale :: Vector3 Double -> Vector3 Double -> Bool
 prop_rotScale (Vector3 0 0 0) _ = True

@@ -65,6 +65,8 @@ instance (Eq t, Floating t) => SpaceTransform (MTransform t) t where
     wrap = MTransform eye
     mapTransform (MTransform m t) = fmap (MTransform m) t
     liftTransform (MTransform m t) = liftM (MTransform m) t
+    transform tr (MTransform m t) = fmap (\f -> f t) tr >>= transformM4 m
+    cotransform (MTransform m f) = (<*>) $ wrap f >>= transformM4 m
 
 
 -- | translation matrix

@@ -40,6 +40,8 @@ class ( Functor (Tensor n m)
     ones :: (Num x) => Tensor n m x
     -- | Tensor with 1 on diagonal and 0 elsewhere
     eye :: (Num x) => Tensor n m x
+    -- | Put the same value on the matrix diagonal, 0 otherwise
+    diag :: (Num x) => x -> Tensor n m x
     -- | Point-wise addition
     infixl 6 .+
     (.+) :: (Num x) => Tensor n m x -> Tensor n m x -> Tensor n m x
@@ -94,9 +96,7 @@ class (TensorMath n n) => SquareMatrix (n::Nat) where
     -- | determinant of a matrix
     det :: (Num x) => Tensor n n x -> x
     -- | sum of diagonal elements
-    trace :: (Num x) => Tensor n n x -> x 
-    -- | Put vector values on the matrix diagonal
-    diag :: (Num x) => Vector n x -> Tensor n n x
+    trace :: (Num x) => Tensor n n x -> x
     -- | Right-side division
     infixl 7 //
     (//) :: (Fractional x) => Tensor n n x -> Tensor n n x  -> Tensor n n x
@@ -123,6 +123,23 @@ prod :: ( Num x
 prod a b = pure (.*.) <*> leftRows <*> rightCols
     where leftRows = mapRows (pure . transpose) a
           rightCols = mapColumns pure b
+
+
+-- | Matrix product of two tensors, the right tensor is transposed (Matrices or Vectors)
+prodT :: ( Num x
+        , TensorMath n m
+        , TensorMath m n
+        , TensorMath n k
+        , TensorMath m k
+        , TensorMath 1 n
+        , TensorMath 1 m
+        , TensorMath 1 k
+        , TensorMath n 1
+        , TensorMath m 1)
+     => Tensor n k x -> Tensor m k x -> Tensor n m x
+prodT a b = pure (.*.) <*> leftRows <*> rightCols
+    where leftRows = mapRows pure a
+          rightCols = transpose . mapRows pure $ b
 
 -- | Functorial map w.r.t. rows
 mapColumns :: ( TensorMath k m
@@ -159,6 +176,7 @@ instance TensorMath 1 1 where
     zeros = Scalar 0
     ones = Scalar 1
     eye = Scalar 1
+    diag = Scalar
     (Scalar a) .+ (Scalar p) = Scalar (a+p)
     (Scalar a) .- (Scalar p) = Scalar (a-p)
     neg (Scalar a) = Scalar (negate a)
@@ -180,7 +198,6 @@ instance TensorMath 1 1 where
 instance SquareMatrix 1 where
     det (Scalar x) = x
     trace (Scalar x) = x
-    diag = id
     Scalar x // Scalar y = Scalar (x/y)
     Scalar x \\ Scalar y = Scalar (y/x)
     invert (Scalar x) = Scalar $ recip x
@@ -193,6 +210,7 @@ instance TensorMath 2 1 where
     zeros = Vector2 0 0
     ones = Vector2 1 1
     eye = Vector2 1 0
+    diag x = Vector2 x 0
     (Vector2 a b) .+ (Vector2 p q) = Vector2 (a+p) (b+q)
     (Vector2 a b) .- (Vector2 p q) = Vector2 (a-p) (b-q)
     neg (Vector2 a b) = Vector2 (negate a) (negate b)
@@ -215,6 +233,7 @@ instance TensorMath 1 2 where
     zeros = Covector2 0 0
     ones = Covector2 1 1
     eye = Covector2 1 0
+    diag x = Covector2 x 0
     (Covector2 a b) .+ (Covector2 p q) = Covector2 (a+p) (b+q)
     (Covector2 a b) .- (Covector2 p q) = Covector2 (a-p) (b-q)
     neg (Covector2 a b) = Covector2 (negate a) (negate b)
@@ -241,6 +260,7 @@ instance TensorMath 3 1 where
     zeros = Vector3 0 0 0
     ones = Vector3 1 1 1
     eye = Vector3 1 0 0
+    diag x = Vector3 x 0 0
     (Vector3 a b c) .+ (Vector3 p q r) = Vector3 (a+p) (b+q) (c+r)
     (Vector3 a b c) .- (Vector3 p q r) = Vector3 (a-p) (b-q) (c-r)
     neg (Vector3 a b c) = Vector3 (negate a) (negate b) (negate c)
@@ -263,6 +283,7 @@ instance TensorMath 1 3 where
     zeros = Covector3 0 0 0
     ones = Covector3 1 1 1
     eye = Covector3 1 0 0
+    diag x = Covector3 x 0 0
     (Covector3 a b c) .+ (Covector3 p q r) = Covector3 (a+p) (b+q) (c+r)
     (Covector3 a b c) .- (Covector3 p q r) = Covector3 (a-p) (b-q) (c-r)
     neg (Covector3 a b c) = Covector3 (negate a) (negate b) (negate c)
@@ -289,6 +310,7 @@ instance TensorMath 4 1 where
     zeros = Vector4 0 0 0 0
     ones = Vector4 1 1 1 1
     eye = Vector4 1 0 0 0
+    diag x = Vector4 x 0 0 0
     Vector4 a b c d .+ Vector4 p q r s = Vector4 (a+p) (b+q) (c+r) (d+s)
     Vector4 a b c d .- Vector4 p q r s = Vector4 (a-p) (b-q) (c-r) (d-s)
     neg (Vector4 a b c d) = Vector4 (negate a) (negate b) (negate c) (negate d)
@@ -311,6 +333,7 @@ instance TensorMath 1 4 where
     zeros = Covector4 0 0 0 0
     ones = Covector4 1 1 1 1
     eye = Covector4 1 0 0 0
+    diag x = Covector4 x 0 0 0
     Covector4 a b c d .+ Covector4 p q r s = Covector4 (a+p) (b+q) (c+r) (d+s)
     Covector4 a b c d .- Covector4 p q r s = Covector4 (a-p) (b-q) (c-r) (d-s)
     neg (Covector4 a b c d) = Covector4 (negate a) (negate b) (negate c) (negate d)
@@ -337,6 +360,7 @@ instance TensorMath 2 2 where
     zeros = Matrix2x2 0 0 0 0
     ones = Matrix2x2 1 1 1 1
     eye = Matrix2x2 1 0 0 1
+    diag x = Matrix2x2 x 0 0 x
     Matrix2x2 x11 x12
               x21 x22 .+
               Matrix2x2 y11 y12
@@ -397,9 +421,7 @@ instance TensorMath 2 2 where
 
 instance SquareMatrix 2 where
     det (Matrix2x2 x11 x12 x21 x22) = x11*x12 - x21*x22
-    trace (Matrix2x2 x11 _ _ x22)= x11 + x22 
-    diag (Vector2 x y) = Matrix2x2 x 0
-                                   0 y
+    trace (Matrix2x2 x11 _ _ x22)= x11 + x22
     a // b = prod a $ invert b
     a \\ b = prod (invert a) b
     invert m@(Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (x22/d) (-x12/d) (-x21/d) (x11/d)
@@ -416,6 +438,8 @@ instance TensorMath 2 3 where
                      1 1 1
     eye = Matrix2x3 1 0 0
                     0 1 0
+    diag x = Matrix2x3 x 0 0
+                       0 x 0
     Matrix2x3 x11 x12 x13
               x21 x22 x23 .+
               Matrix2x3 y11 y12 y13
@@ -505,6 +529,8 @@ instance TensorMath 2 4 where
                      1 1 1 1
     eye = Matrix2x4 1 0 0 0
                     0 1 0 0
+    diag x = Matrix2x4 x 0 0 0
+                       0 x 0 0
     Matrix2x4 x11 x12 x13 x14
               x21 x22 x23 x24 .+
               Matrix2x4 y11 y12 y13 y14
@@ -600,6 +626,9 @@ instance TensorMath 3 2 where
     eye = Matrix3x2 1 0
                     0 1
                     0 0
+    diag x = Matrix3x2 x 0
+                       0 x
+                       0 0
     Matrix3x2 x11 x12
               x21 x22
               x31 x32 .+
@@ -723,6 +752,9 @@ instance TensorMath 3 3 where
     eye = Matrix3x3 1 0 0
                     0 1 0
                     0 0 1
+    diag x = Matrix3x3 x 0 0
+                       0 x 0
+                       0 0 x
     Matrix3x3 x11 x12 x13
               x21 x22 x23
               x31 x32 x33 .+
@@ -843,9 +875,6 @@ instance SquareMatrix 3 where
     trace (Matrix3x3 x11 _ _
                      _ x22 _
                      _ _ x33) = x11 + x22 + x33
-    diag (Vector3 x y z) = Matrix3x3 x 0 0
-                                     0 y 0
-                                     0 0 z
     a // b = prod a $ invert b
     a \\ b = prod (invert a) b
     invert m@(Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33)
@@ -874,6 +903,9 @@ instance TensorMath 3 4 where
     eye = Matrix3x4 1 0 0 0
                     0 1 0 0
                     0 0 1 0
+    diag x = Matrix3x4 x 0 0 0
+                       0 x 0 0
+                       0 0 x 0
     Matrix3x4 x11 x12 x13 x14
               x21 x22 x23 x24
               x31 x32 x33 x34 .+
@@ -1006,6 +1038,10 @@ instance TensorMath 4 2 where
                     0 1
                     0 0
                     0 0
+    diag x = Matrix4x2 x 0
+                       0 x
+                       0 0
+                       0 0
     Matrix4x2 x11 x12
               x21 x22
               x31 x32
@@ -1167,6 +1203,10 @@ instance TensorMath 4 3 where
                     0 1 0
                     0 0 1
                     0 0 0
+    diag x = Matrix4x3 x 0 0
+                       0 x 0
+                       0 0 x
+                       0 0 0
     Matrix4x3 x11 x12 x13
               x21 x22 x23
               x31 x32 x33
@@ -1330,6 +1370,10 @@ instance TensorMath 4 4 where
                     0 1 0 0
                     0 0 1 0
                     0 0 0 1
+    diag x = Matrix4x4 x 0 0 0
+                       0 x 0 0
+                       0 0 x 0
+                       0 0 0 x
     Matrix4x4 x11 x12 x13 x14
               x21 x22 x23 x24
               x31 x32 x33 x34
@@ -1489,10 +1533,6 @@ instance SquareMatrix 4 where
                      _ x22 _ _
                      _ _ x33 _
                      _ _ _ x44) = x11 + x22 + x33 + x44
-    diag (Vector4 x y z w) = Matrix4x4 x 0 0 0
-                                       0 y 0 0
-                                       0 0 z 0
-                                       0 0 0 w
     a // b = prod a $ invert b
     a \\ b = prod (invert a) b
     invert m@(Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44)

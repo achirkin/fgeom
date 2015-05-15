@@ -42,9 +42,9 @@ class (Functor s, Applicative s, Monad s) => SpaceTransform s t | s -> t where
     -- | Create transform from quaternion (note, according to current implementation, scale @s = |q|@, and rotation angle @a = arccos (re q)@, i.e. @v' = sqrt q * v * sqrt (conjugate q)@)
     rotateScale :: (Eq t, Floating t) => Quaternion t -> x -> s x
     -- | Apply transform to 3D vector
-    applyV3 :: (Eq t, Floating t) => s (Vector 3 t) -> Vector3 t
+    applyV3 :: (Eq t, Floating t) => s (Vector 3 t) -> Vector 3 t
     -- | Apply transform to homogeneous vector
-    applyV4 :: (Eq t, Floating t) => s (Vector 4 t) -> Vector4 t
+    applyV4 :: (Eq t, Floating t) => s (Vector 4 t) -> Vector 4 t
     -- | Create transform from transformation matrix
     transformM3 :: (Eq t, Floating t) => Tensor 3 3 t -> x -> s x
     -- | Create transform from transformation matrix
@@ -57,3 +57,7 @@ class (Functor s, Applicative s, Monad s) => SpaceTransform s t | s -> t where
     mapTransform :: (Functor f) => s (f x) -> f (s x)
     -- | Lift transform into Monadic data
     liftTransform :: (Monad m) => s (m x) -> m (s x)
+    -- | Transform another SpaceTransform using this one. Multitype analouge of `>>=`
+    transform :: (SpaceTransform s1 t) => s1 (x -> y) -> s x -> s1 y
+    -- | Transform this SpaceTransform using another one. Multitype analouge of `>>=`
+    cotransform :: (SpaceTransform s1 t) => s (x -> y) -> s1 x -> s1 y

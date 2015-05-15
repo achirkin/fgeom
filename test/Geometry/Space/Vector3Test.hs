@@ -7,7 +7,7 @@ import Test.Framework
 import Geometry.Space.VectorGenerators ()
 
 
-prop_vectorProductAnticommutativity :: Tensor 3 1 Double -> Tensor 3 1 Double -> Bool
+prop_vectorProductAnticommutativity :: Vector3 Double -> Vector3 Double -> Bool
 prop_vectorProductAnticommutativity a b = cross a b == neg (cross b a)
 
 prop_vectorProductZeroAngle :: Vector3 Double -> Bool

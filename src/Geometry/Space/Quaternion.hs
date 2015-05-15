@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE AutoDeriveTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector4
@@ -22,7 +21,10 @@ import Data.Typeable
 import Data.Data (Data)
 import Foreign (Storable, castPtr, peek, poke, pokeElemOff, peekElemOff, sizeOf,
                 alignment)
-
+import Control.Applicative ( Applicative(..) )
+import Control.Monad ( ap )
+import Data.Foldable ( Foldable(..) )
+import Data.Traversable ( Traversable(..))
 import Data.Fixed as DF
 
 import Geometry.Space.Types
@@ -150,6 +152,9 @@ instance (Floating a) => Fractional (Quaternion a) where
     p / q = p * recip q
     fromRational r = Q 0 0 0 (fromRational r)
 
+-- | Getting floating functions by considering only one plane - real axis + vector axis.
+--   Effectively this gives functions exactly the same as on Complex numbers.
+--   Functions of pure-real quaternions are considered as having x-imagenery axis (1,0,0)
 instance  (RealFloat a) => Floating (Quaternion a) where
     {-# SPECIALISE instance Floating (Quaternion Float) #-}
     {-# SPECIALISE instance Floating (Quaternion Double) #-}
@@ -217,6 +222,25 @@ instance  (RealFloat a) => Floating (Quaternion a) where
     atanh (Q 0 0 0 t) = Q 0 0 0 (atanh t)
     atanh q = 0.5 * log ((1+q)/(1-q))
 
+instance Functor Quaternion where
+   fmap f (Q x y z w) = Q (f x) (f y) (f z) (f w)
+
+instance Applicative Quaternion where
+   pure a = Q a a a a
+   Q f g h e <*> Q x y z w = Q (f x) (g y) (h z) (e w)
+
+instance Foldable Quaternion where
+   foldr f a (Q x y z w) = x `f ` (y `f ` (z `f` (w `f` a)))
+   foldl f a (Q x y z w) = (((a `f` x) `f` y) `f` z) `f` w
+   foldr1 f (Q x y z w) = x `f` (y `f` (z `f` w))
+   foldl1 f (Q x y z w) = ((x `f` y) `f` z) `f` w
+
+instance Traversable Quaternion where
+   traverse f (Q x y z w) = pure Q <*> f x <*> f y <*> f z <*> f w
+   sequenceA (Q x y z w) =  pure Q <*> x <*> y <*> z <*> w
+   mapM f (Q x y z w) = return Q `ap` f x `ap` f y `ap` f z `ap` f w
+   sequence (Q x y z w) = return Q `ap` x `ap` y `ap` z `ap` w
+
 
 -- | Save quaternion, real part is last
 instance Storable a => Storable (Quaternion a) where
@@ -225,14 +249,14 @@ instance Storable a => Storable (Quaternion a) where
     sizeOf (Q x _ _ _) = 4 * sizeOf x
     alignment (Q x _ _ _) = alignment x
     peek p = do
-        q <- return $ castPtr p
+        let q = castPtr p
         x <- peek q
         y <- peekElemOff q 1
         z <- peekElemOff q 2
         t <- peekElemOff q 3
         return $ Q x y z t
     poke p (Q x y z t) = do
-        q <-return $  (castPtr p)
+        let q = castPtr p
         poke q x
         pokeElemOff q 1 y
         pokeElemOff q 2 z

@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE KindSignatures, DataKinds #-}
@@ -21,10 +20,11 @@ module Geometry.Space.Types
     , Vector2, det2
     , Vector3, det3, cross
     , Vector4, fromHom
+    , Scalar, Matrix2x2, Matrix3x3, Matrix4x4
     ) where
 
 import Control.Applicative ( Applicative(..) )
-import Control.Monad ( ap, void )
+import Control.Monad ( ap, void, liftM )
 import Data.Foldable ( Foldable(..), foldlM )
 import Data.Ix ( Ix )
 import Data.Traversable ( Traversable(..), mapAccumL  )
@@ -56,6 +56,18 @@ type Vector3 a = Tensor 3 1 a
 -- | 4D Vector synonym
 type Vector4 a = Tensor 4 1 a
 
+-- | 4D Square Matrix synonym
+type Matrix4x4 a = Tensor 4 4 a
+
+-- | 3D Square Matrix synonym
+type Matrix3x3 a = Tensor 3 3 a
+
+-- | 2D Square Matrix synonym
+type Matrix2x2 a = Tensor 2 2 a
+
+-- | Scalar synonym
+type Scalar a = Tensor 1 1 a
+
 --------------------------------------------------------------------------------
 -- | Scalar - normally, it is not necessary to wrap data into it, but sometimes
 --   it is usefull
@@ -68,7 +80,7 @@ instance Functor (Tensor 1 1) where
     fmap f (Scalar x) = Scalar (f x)
 
 instance Applicative (Tensor 1 1) where
-    pure a = Scalar a
+    pure = Scalar
     Scalar f <*> Scalar x = Scalar (f x)
 
 instance Foldable (Tensor 1 1) where
@@ -86,7 +98,7 @@ instance Traversable (Tensor 1 1) where
 instance Storable a => Storable (Tensor 1 1 a) where
     sizeOf ~(Scalar x) = sizeOf x
     alignment ~(Scalar x) = alignment x
-    peek x = (peek . castPtr $ x) >>= return . pure
+    peek x = liftM pure (peek . castPtr $ x)
     poke ptr (Scalar x) = poke (castPtr ptr) x
 
 --------------------------------------------------------------------------------
