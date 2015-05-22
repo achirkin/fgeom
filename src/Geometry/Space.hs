@@ -14,8 +14,8 @@
 module Geometry.Space ( module X ) where
 
 import Geometry.Space.Types as X
-
 import Geometry.Space.Tensor as X
+import Geometry.Space.Approximate as X
 
 --import Geometry.Space.ScalarOperations       as X
 --import Geometry.Space.ScalarTensorOperations as X

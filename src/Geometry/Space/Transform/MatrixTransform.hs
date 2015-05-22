@@ -21,7 +21,7 @@ import Geometry.Space.Types
 import Geometry.Space.Quaternion
 import Geometry.Space.Tensor
 
-import Geometry.Space.Transform
+import Geometry.Space.Transform.SpaceTransform
 
 -- | SpaceTransform via standard transformation matrices (homogeneous coordinates)
 data MTransform t a = MTransform (Tensor 4 4 t) a

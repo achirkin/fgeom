@@ -22,7 +22,7 @@ import Geometry.Space.Types
 import Geometry.Space.Quaternion
 import Geometry.Space.Tensor
 
-import Geometry.Space.Transform
+import Geometry.Space.Transform.SpaceTransform
 
 -- | Space transform represented by Quaternion and Vector
 --   Supports only rotation, uniform scale, and translate
