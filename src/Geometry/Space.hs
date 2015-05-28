@@ -11,19 +11,13 @@
 -- The module provides mathematical operations on vector types
 --
 --------------------------------------------------------------------------------
-module Geometry.Space ( module X ) where
 
-import Geometry.Space.Types as X
-import Geometry.Space.Tensor as X
-import Geometry.Space.Approximate as X
+module Geometry.Space
+    ( module Geometry.Space.Types
+    , module Geometry.Space.Tensor
+    , module Geometry.Space.Approximate
+    ) where
 
---import Geometry.Space.ScalarOperations       as X
---import Geometry.Space.ScalarTensorOperations as X
---import Geometry.Space.TensorOperations       as X
---import Geometry.Space.SetTensorOperations    as X
-
-
---import Geometry.Space.Transform                     as X
---import Geometry.Space.Transform.MatrixTransform     as X
---import Geometry.Space.Transform.QuaternionTransform as X
---import Geometry.Space.Transform.TransformInterop    as X
+import Geometry.Space.Types
+import Geometry.Space.Tensor
+import Geometry.Space.Approximate

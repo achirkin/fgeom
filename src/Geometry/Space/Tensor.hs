@@ -238,10 +238,8 @@ instance TensorMath 2 1 where
     fromColRow (Vector2 (Scalar x) (Scalar y)) = Vector2 x y
     fromRowCol (Scalar v) = v
     transpose (Vector2 x y) = Covector2 x y
-    minmax (Vector2 x1 x2) (Vector2 y1 y2)
-        = ( Vector2 l1 l2, Vector2 h1 h2)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 instance TensorMath 1 2 where
     zeros = Covector2 0 0
@@ -265,10 +263,8 @@ instance TensorMath 1 2 where
     fromColRow (Scalar v) = v
     fromRowCol (Covector2 (Scalar x) (Scalar y)) = Covector2 x y
     transpose (Covector2 x y) = Vector2 x y
-    minmax (Covector2 x1 x2) (Covector2 y1 y2)
-        = ( Covector2 l1 l2, Covector2 h1 h2)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 --------------------------------------------------------------------------------
 -- 3D Vector
@@ -296,11 +292,8 @@ instance TensorMath 3 1 where
     fromColRow (Vector3 (Scalar x) (Scalar y) (Scalar z)) = Vector3 x y z
     fromRowCol (Scalar v) = v
     transpose (Vector3 x y z) = Covector3 x y z
-    minmax (Vector3 x1 x2 x3) (Vector3 y1 y2 y3)
-        = ( Vector3 l1 l2 l3, Vector3 h1 h2 h3)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
-                  (l3,h3) = minmax' x3 y3
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 instance TensorMath 1 3 where
     zeros = Covector3 0 0 0
@@ -324,11 +317,8 @@ instance TensorMath 1 3 where
     fromColRow (Scalar v) = v
     fromRowCol (Covector3 (Scalar x) (Scalar y) (Scalar z)) = Covector3 x y z
     transpose (Covector3 x y z) = Vector3 x y z
-    minmax (Covector3 x1 x2 x3) (Covector3 y1 y2 y3)
-        = ( Covector3 l1 l2 l3, Covector3 h1 h2 h3)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
-                  (l3,h3) = minmax' x3 y3
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 --------------------------------------------------------------------------------
 -- 4D Vector
@@ -356,12 +346,8 @@ instance TensorMath 4 1 where
     fromColRow (Vector4 (Scalar x) (Scalar y) (Scalar z) (Scalar w)) = Vector4 x y z w
     fromRowCol (Scalar v) = v
     transpose (Vector4 x y z w) = Covector4 x y z w
-    minmax (Vector4 x1 x2 x3 x4) (Vector4 y1 y2 y3 y4)
-        = ( Vector4 l1 l2 l3 l4, Vector4 h1 h2 h3 h4)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
-                  (l3,h3) = minmax' x3 y3
-                  (l4,h4) = minmax' x4 y4
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 instance TensorMath 1 4 where
     zeros = Covector4 0 0 0 0
@@ -385,12 +371,8 @@ instance TensorMath 1 4 where
     fromColRow (Scalar v) = v
     fromRowCol (Covector4 (Scalar x) (Scalar y) (Scalar z) (Scalar w)) = Covector4 x y z w
     transpose (Covector4 x y z w) = Vector4 x y z w
-    minmax (Covector4 x1 x2 x3 x4) (Covector4 y1 y2 y3 y4)
-        = ( Covector4 l1 l2 l3 l4, Covector4 h1 h2 h3 h4)
-            where (l1,h1) = minmax' x1 y1
-                  (l2,h2) = minmax' x2 y2
-                  (l3,h3) = minmax' x3 y3
-                  (l4,h4) = minmax' x4 y4
+    minmax x y = (fmap fst m, fmap snd m)
+        where m = pure minmax' <*> x <*> y
 
 --------------------------------------------------------------------------------
 -- 2x2 Square Matrix

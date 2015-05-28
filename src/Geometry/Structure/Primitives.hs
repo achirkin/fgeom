@@ -22,6 +22,7 @@ module Geometry.Structure.Primitives
     , Line (), lineFromPD, lineFromPP,pointOnLine, lineDir
     , Ray (..), LineSegment (..)
     , HyperPlane (), Plane, plane, planeNormal, distToOrigin
+    , Polygon (..), triangulate
     ) where
 
 import Prelude hiding (foldr, foldl, foldr1, foldl1, mapM, sequence)
@@ -82,11 +83,8 @@ instance ( Storable a, Storable (Tensor n 1 a)
          => Storable (Line n a) where
     sizeOf ~(Line x v) = sizeOf x + sizeOf v
     alignment ~(Line x v) = max (alignment x) (alignment v)
-    peek ptr = do
-        let p = castPtr ptr
-        x <- peek p
-        v <- peekElemOff p 1
-        return $ lineFromPD x v
+    peek ptr = return lineFromPD <*> peek p <*> peekElemOff p 1
+        where p = castPtr ptr
     poke ptr (Line x v) = poke p x >> pokeElemOff p 1 v
         where p = castPtr ptr
 
@@ -102,8 +100,8 @@ instance (Approximate (Tensor n 1 x), TensorMath n 1, Fractional x)
 -- | Ray in n-dimensional space
 ---------------------------------------------------------------------------------------
 
-data Ray n x = Ray !(Point n x) -- ^ starting point
-                   !(Vector n x) -- ^ direction vector
+data Ray n x = Ray !(Point n x) -- starting point
+                   !(Vector n x) -- direction vector
 
 
 deriving instance Eq (Vector n x) => Eq (Ray n x)
@@ -114,11 +112,8 @@ instance ( Storable a, Storable (Tensor n 1 a)
          => Storable (Ray n a) where
     sizeOf ~(Ray x _) = 2 * sizeOf x
     alignment ~(Ray x _) = alignment x
-    peek ptr = do
-        let p = castPtr ptr
-        x <- peek p
-        v <- peekElemOff p 1
-        return $ Ray x v
+    peek ptr = return Ray <*> peek p <*> peekElemOff p 1
+        where p = castPtr ptr
     poke ptr (Ray x v) = poke p x >> pokeElemOff p 1 v
         where p = castPtr ptr
 
@@ -135,8 +130,8 @@ instance ( Approximate (Tensor n 1 x)
 -- | LineSegment in n-dimensional space
 ---------------------------------------------------------------------------------------
 
-data LineSegment n x = LineSegment !(Point n x) -- ^ start point
-                                   !(Point n x) -- ^ end point
+data LineSegment n x = LineSegment !(Point n x) --  start point
+                                   !(Point n x) --  end point
 
 
 deriving instance Eq (Vector n x) => Eq (LineSegment n x)
@@ -147,11 +142,8 @@ instance ( Storable a, Storable (Tensor n 1 a)
          => Storable (LineSegment n a) where
     sizeOf ~(LineSegment x _) = 2 * sizeOf x
     alignment ~(LineSegment x _) = alignment x
-    peek ptr = do
-        let p = castPtr ptr
-        x <- peek p
-        y <- peekElemOff p 1
-        return $ LineSegment x y
+    peek ptr = return LineSegment <*> peek p <*> peekElemOff p 1
+        where p = castPtr ptr
     poke ptr (LineSegment x y) = poke p x >> pokeElemOff p 1 y
         where p = castPtr ptr
 
@@ -210,3 +202,27 @@ instance (Approximate (Tensor n 1 x), TensorMath n 1, Fractional x)
     areClose (HyperPlane x dx) (HyperPlane y dy) = isSmall' (dx-dy) >>= \yes ->
             if yes then areCodirected x y else return False
     approx (HyperPlane x d) = liftM2 HyperPlane (approx x) (approx' d)
+
+---------------------------------------------------------------------------------------
+-- | Polygon in n-dimensional space
+---------------------------------------------------------------------------------------
+
+data Polygon n x = SimpleConvexPolygon [Point n x] -- ^ The simplest type of polygon
+                 | SimplePolygon [Point n x] -- ^ Polygon without holes
+                 | GenericPolygon [Polygon n x] -- ^ Polygon with holes
+
+deriving instance Eq (Vector n x) => Eq (Polygon n x)
+deriving instance Show (Vector n x) => Show (Polygon n x)
+
+-- | Stupid, partial algorithm, to fix it!
+triangulate :: Polygon n x -> [Point n x]
+triangulate (SimpleConvexPolygon pts) = f pts []
+    where f [] [] = []
+          f [_] [] = []
+          f [_,_] [] = []
+          f [] qs = f (reverse qs) []
+          f [a] qs = f (reverse $ a:qs) []
+          f [a,b] qs = f (reverse $ b:a:qs) []
+          f (a:b:c:xs) qs = a:b:c: f (c:xs) (a:qs)
+triangulate _ = undefined
+

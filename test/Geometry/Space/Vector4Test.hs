@@ -4,7 +4,6 @@ module Geometry.Space.Vector4Test where
 import Geometry.Space
 import Geometry.Space.Quaternion
 
-
 import Test.Framework
 import Geometry.Space.VectorGenerators ()
 
@@ -22,12 +21,13 @@ units = [1,i,j,k] :: [Quaternion Double]
 
 -- various tests for quaternions
 
-test_unitMultiplication :: IO ()
-test_unitMultiplication = do
-    assertEqual [1,  i,  j,  k] $ mapM (flip (*)) units 1
-    assertEqual [i, -1,  k, -j] $ mapM (flip (*)) units i
-    assertEqual [j, -k, -1,  i] $ mapM (flip (*)) units j
-    assertEqual [k,  j, -i, -1] $ mapM (flip (*)) units k
+prop_unitMultiplication :: Bool
+prop_unitMultiplication = and
+    [ and . zipWith (==) [1,  i,  j,  k] $ map (1*) units
+    , and . zipWith (==) [i, -1,  k, -j] $ map (i*) units
+    , and . zipWith (==) [j, -k, -1,  i] $ map (j*) units
+    , and . zipWith (==) [k,  j, -i, -1] $ map (k*) units
+    ]
 
 prop_inverse :: Quaternion Double -> Bool
 prop_inverse a = (a == 0) || (recip a == 1 / a && square (a * recip a - 1) < 1e-15)

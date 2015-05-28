@@ -17,5 +17,16 @@ cabal.config
 .settings/
 docs/
 
+# leksah stuff
+*.lkshf
+
+# profiling
+*.hp
+*.prof
+*.htm
+*.html
+*.ps
+*.aux
+
 # my own stuff
 *.nb
