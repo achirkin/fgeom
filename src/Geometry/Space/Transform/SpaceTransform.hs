@@ -62,3 +62,8 @@ class (Functor s, Applicative s, Monad s) => SpaceTransform s t | s -> t where
     transform :: (SpaceTransform s1 t) => s1 (x -> y) -> s x -> s1 y
     -- | Transform this SpaceTransform using another one. Multitype analouge of `>>=`
     cotransform :: (SpaceTransform s1 t) => s (x -> y) -> s1 x -> s1 y
+
+--    -- | return the overall rotation and scale
+--    getRotationScale :: s x -> Quaternion t
+--    -- | return the overall translation of the transform
+--    getTranslation :: s x -> Vector 3 t

@@ -89,6 +89,7 @@ infix 4 ~==~
 
 
 -- | If approximations turned out to be stacked this function allows flattening them.
+--   The same as monadic join
 mergeApprox :: Approximately eps (Approximately eps a) -> Approximately eps a
 mergeApprox mm = Approximately $ \eps -> runApprox (runApprox mm eps) eps
 

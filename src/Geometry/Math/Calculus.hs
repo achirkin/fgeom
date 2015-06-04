@@ -18,7 +18,6 @@ module Geometry.Math.Calculus where
 import Geometry.Space
 import Control.Applicative (pure, (<*>))
 import Data.List (foldl1')
-import Data.Foldable (foldMap)
 
 -- | Number of points to use in approximation
 data ApproximationType = TwoPointForward  | TwoPointBackward
@@ -77,6 +76,57 @@ derivative2' FivePoint dx f x = (/(12*dx*dx)) . sum $ zipWith (*) fs [-1, 16, -3
 derivative2' _ dx f x = (f(x+dx) - 2*f(x) + f(x-dx) ) / dx / dx
 
 
+-- | Gradient of nD -> 1D function. The same as `derivative`, but for 1D-result functions only
+gradient :: ( Fractional x
+            , TensorMath 1 n
+            , TensorMath n 1
+            , TensorMath n n
+            )
+         => ApproximationType
+         -> x -- ^ delta (precision)
+         -> (Vector n x -> x) -- ^ function to get the gradient
+         -> Vector n x -- ^ argument
+         -> Vector n x
+gradient TwoPointForward dx f x = (f1 .- f0) /.. dx
+    where f0 = pure $ f x
+          f1 = transpose . fmap f . toRowCol $ diag dx .+ fromRowCol (pure x)
+gradient TwoPointBackward dx f x = (f1 .- f0) /.. dx
+    where f0 = transpose . fmap f . toRowCol $ diag dx .- fromRowCol (pure x)
+          f1 = pure $ f x
+gradient ThreePoint dx f x = (f1 .- f0) /.. (2*dx)
+    where f0 = transpose . fmap f . toRowCol $ xm .- ddx
+          f1 = transpose . fmap f . toRowCol $ xm .+ ddx
+          xm = fromRowCol $ pure x
+          ddx = diag dx
+gradient FivePoint dx f x = (/..(12*dx)) . foldl1' (.+) $ zipWith (*..) fs [1, -8, 8, -1]
+    where xm = fromRowCol $ pure x
+          fs = map (transpose . fmap f . toRowCol . (xm .+ ) . diag . (dx*)) [-2,-1,1,2]
+
+--divergence :: ( Fractional x
+--            , TensorMath 1 n
+--            , TensorMath n 1
+--            , TensorMath n n
+--            )
+--           => ApproximationType
+--           -> x -- ^ delta (precision)
+--           -> (Vector n x -> Vector n x) -- ^ function to get the divergence
+--           -> Vector n x -- ^ argument
+--           -> x
+--divergence TwoPointForward dx f x = (f1 .- f0) /.. dx
+--    where f0 = fromRowCol . pure $ f x
+--          f1 = f
+--          xx = pure (.+) <*> (toRowCol (diag dx)) <*> (pure x)
+--divergence TwoPointBackward dx f x = (f1 .- f0) /.. dx
+--    where f0 = mapColumns f $ diag dx .- fromRowCol (pure x)
+--          f1 = fromRowCol . pure $ f x
+--divergence ThreePoint dx f x = (f1 .- f0) /.. (2*dx)
+--    where f0 = mapColumns f $ xm .- ddx
+--          f1 = mapColumns f $ xm .+ ddx
+--          xm = fromRowCol $ pure x
+--          ddx = diag dx
+--divergence FivePoint dx f x = (/..(12*dx)) . foldl1' (.+) $ zipWith (*..) fs [1, -8, 8, -1]
+--    where xm = fromRowCol $ pure x
+--          fs = map (mapColumns f . (xm .+ ) . diag . (dx*)) [-2,-1,1,2]
 
 -- | Calculate the Hessian of a function numerially
 --   Scheme: `d^2 f / dx dy = ( f(x,y) + f(-x,-y) - f(x,-y) - f(-x,y) ) / (4 x y) + O(x^2 + y^2)`

@@ -11,7 +11,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- This Module contains definitions for R^3 Euclidian space
+-- This Module defines Quaternion calculus
 --
 --------------------------------------------------------------------------------
 
@@ -171,11 +171,12 @@ instance  (RealFloat a) => Floating (Quaternion a) where
               l = acos (t / mq) / sqrt (x*x + y*y + z*z)
     sqrt (Q 0 0 0 t) | t >= 0 = Q 0 0 0 (sqrt t)
                      | otherwise = Q (sqrt (-t)) 0 0 0
-    sqrt (Q x y z t) = Q (x*sina) (y*sina) (z*sina) (signum t * sqrt (0.5 + tq) * l2)
-        where l = sqrt (x*x + y*y + z*z + t*t)
+    sqrt (Q x y z t) = Q (x*sina) (y*sina) (z*sina) (sqrt (0.5 + tq) * l2)
+        where s = x*x + y*y + z*z
+              l = sqrt (s + t*t)
               l2 = sqrt l
               tq = t / l / 2
-              sina = sqrt (0.5 - tq) / l2
+              sina = sqrt (0.5 - tq) * l2 / sqrt s
     sin (Q 0 0 0 t) = Q 0 0 0 (sin t)
     sin (Q x y z t) = Q (x*l) (y*l) (z*l) (sin t * cosh mv)
         where mv = sqrt (x*x + y*y + z*z)

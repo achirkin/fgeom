@@ -225,4 +225,3 @@ triangulate (SimpleConvexPolygon pts) = f pts []
           f [a,b] qs = f (reverse $ b:a:qs) []
           f (a:b:c:xs) qs = a:b:c: f (c:xs) (a:qs)
 triangulate _ = undefined
-
