@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, DataKinds #-}
 -----------------------------------------------------------------------------
 --
@@ -15,10 +18,15 @@
 
 module Geometry.Space.Transform.SpaceTransform where
 
+import GHC.TypeLits
+
 import Control.Applicative (Applicative ())
 
 import Geometry.Space.Types
 import Geometry.Space.Quaternion
+
+
+
 
 -- | SpaceTransform separates space transformations (such as rotation, scaling, and others) from actual points.
 --   This means objects inside SpaceTransform Monad normally stay untouched until transformations are applied.
@@ -27,41 +35,62 @@ import Geometry.Space.Quaternion
 -- > translate (Vector3 1 0 0) x >>= scale 2 >>= rotateX pi
 --   The code above means: first translate, then scale, then rotate; if transforms were just matrices, @>>=@ would be matrix multiplication.
 --   Important: these transforms are applied inside, not outside - i.e. translate in the example above is outermost matrix.
-class (Functor s, Applicative s, Monad s) => SpaceTransform s t | s -> t where
+class ( Functor (STransform s t)
+      , Applicative (STransform s t)
+      , Monad (STransform s t)) => SpaceTransform (s::Symbol) t where
+    -- | Space transform data type itself.
+    --   `s` is a type of transform
+    data STransform s t :: * -> *
     -- | Create rotation transform
-    rotate :: (Eq t, Floating t, Real t) => Tensor 3 1 t -> t -> x -> s x
+    rotate :: (Eq t, Floating t, Real t) => Tensor 3 1 t -> t -> x -> STransform s t x
     -- | Create rotation transform by rotating w.r.t. X axis
-    rotateX :: (Floating t) => t -> x -> s x
+    rotateX :: (Floating t) => t -> x -> STransform s t x
     -- | Create rotation transform by rotating w.r.t. Y axis
-    rotateY :: (Floating t) => t -> x -> s x
+    rotateY :: (Floating t) => t -> x -> STransform s t x
     -- | Create rotation transform by rotating w.r.t. Y axis
-    rotateZ :: (Floating t) => t -> x -> s x
+    rotateZ :: (Floating t) => t -> x -> STransform s t x
     -- | Create transform by uniform scaling
-    scale :: (Num t) => t -> x -> s x
+    scale :: (Num t) => t -> x -> STransform s t x
     -- | Create transform by translating
-    translate :: (Num t) => Vector 3 t -> x -> s x
+    translate :: (Num t) => Vector 3 t -> x -> STransform s t x
     -- | Create transform from quaternion (note, according to current implementation, scale @s = |q|@, and rotation angle @a = arccos (re q)@, i.e. @v' = sqrt q * v * sqrt (conjugate q)@)
-    rotateScale :: (Eq t, Floating t) => Quaternion t -> x -> s x
+    rotateScale :: (Eq t, Floating t) => Quaternion t -> x -> STransform s t x
     -- | Apply transform to 3D vector
-    applyV3 :: (Eq t, Floating t) => s (Vector 3 t) -> Vector 3 t
+    applyV3 :: (Eq t, Floating t) => STransform s t (Vector 3 t) -> Vector 3 t
     -- | Apply transform to homogeneous vector
-    applyV4 :: (Eq t, Floating t) => s (Vector 4 t) -> Vector 4 t
+    applyV4 :: (Eq t, Floating t) => STransform s t (Vector 4 t) -> Vector 4 t
     -- | Create transform from transformation matrix
-    transformM3 :: (Eq t, Floating t) => Tensor 3 3 t -> x -> s x
+    transformM3 :: (Eq t, Floating t) => Tensor 3 3 t -> x -> STransform s t x
     -- | Create transform from transformation matrix
-    transformM4 :: (Eq t, Floating t) => Tensor 4 4 t -> x -> s x
+    transformM4 :: (Eq t, Floating t) => Tensor 4 4 t -> x -> STransform s t x
     -- | Get bare data without applying transform
-    unwrap :: s x -> x
-    -- | Wrap data into unit transform (that does nothing)
-    wrap :: (Num t) => x -> s x
+    unwrap :: STransform s t x -> x
+    -- | Wrap data into existing transform discarding transform content
+    wrap :: (Num t) => x -> STransform s t y -> STransform s t x
     -- | Map transform into Functor's inside
-    mapTransform :: (Functor f) => s (f x) -> f (s x)
+    mapTransform :: (Functor f) => STransform s t (f x) -> f (STransform s t x)
     -- | Lift transform into Monadic data
-    liftTransform :: (Monad m) => s (m x) -> m (s x)
-    -- | Transform another SpaceTransform using this one. Multitype analouge of `>>=`
-    transform :: (SpaceTransform s1 t) => s1 (x -> y) -> s x -> s1 y
-    -- | Transform this SpaceTransform using another one. Multitype analouge of `>>=`
-    cotransform :: (SpaceTransform s1 t) => s (x -> y) -> s1 x -> s1 y
+    liftTransform :: (Monad m) => STransform s t (m x) -> m (STransform s t x)
+    -- | Transform another STransform using this one. Multitype analogue of `>>=`
+    mergeSecond :: (SpaceTransform s1 t) => STransform s1 t (x -> y) -> STransform s t x -> STransform s1 t y
+    -- | Transform this STransform using another one. Multitype analogue of `>>=`
+    mergeFirst :: (SpaceTransform s1 t) => STransform s t (x -> y) -> STransform s1 t x -> STransform s1 t y
+
+-- | Kind of object that can be transformed
+class Transformable x t | x -> t where
+    -- | Apply wrapping transform on the object inside
+    transform :: (SpaceTransform s t, Floating t, Eq t) => STransform s t x -> x
+
+instance Transformable (Vector 3 t) t where
+    transform = applyV3
+
+instance Transformable (Vector 4 t) t where
+    transform = applyV4
+
+-- | Apply transform on each point within Functor
+ftransform :: (SpaceTransform s t, Functor f, Transformable b t, Floating t, Eq t)
+           => STransform s t (f b) -> f b
+ftransform = fmap transform . mapTransform
 
 --    -- | return the overall rotation and scale
 --    getRotationScale :: s x -> Quaternion t

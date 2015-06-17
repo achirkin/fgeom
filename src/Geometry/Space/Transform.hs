@@ -12,12 +12,7 @@
 --
 --------------------------------------------------------------------------------
 
-module Geometry.Space.Transform
-    ( module Geometry.Space.Transform.SpaceTransform
-    , module Geometry.Space.Transform.MatrixTransform
-    , module Geometry.Space.Transform.QuaternionTransform
-    ) where
-
-import Geometry.Space.Transform.SpaceTransform
-import Geometry.Space.Transform.MatrixTransform
-import Geometry.Space.Transform.QuaternionTransform
+module Geometry.Space.Transform (module X) where
+ import Geometry.Space.Transform.SpaceTransform as X
+ import Geometry.Space.Transform.MatrixTransform as X
+ import Geometry.Space.Transform.QuaternionTransform as X

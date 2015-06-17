@@ -12,12 +12,7 @@
 --
 --------------------------------------------------------------------------------
 
-module Geometry.Space
-    ( module Geometry.Space.Types
-    , module Geometry.Space.Tensor
-    , module Geometry.Space.Approximate
-    ) where
-
-import Geometry.Space.Types
-import Geometry.Space.Tensor
-import Geometry.Space.Approximate
+module Geometry.Space (module X) where
+ import Geometry.Space.Types as X
+ import Geometry.Space.Tensor as X
+ import Geometry.Space.Approximate as X

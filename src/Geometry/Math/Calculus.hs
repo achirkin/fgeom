@@ -73,7 +73,7 @@ derivative2' :: (Fractional x)
              -> x -- ^ value of the derivative
 derivative2' FivePoint dx f x = (/(12*dx*dx)) . sum $ zipWith (*) fs [-1, 16, -30, 16, -1]
     where fs = map (f . (x+) . (dx*)) [-2,-1,0,1,2]
-derivative2' _ dx f x = (f(x+dx) - 2*f(x) + f(x-dx) ) / dx / dx
+derivative2' _ dx f x = (f(x+dx) - 2*f x + f(x-dx) ) / dx / dx
 
 
 -- | Gradient of nD -> 1D function. The same as `derivative`, but for 1D-result functions only

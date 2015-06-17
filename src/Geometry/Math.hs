@@ -12,12 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Geometry.Math
-    ( module Geometry.Math.Calculus
-    , module Geometry.Math.Polynomial
-    , module Geometry.Math.Statistics
-    ) where
-
-import Geometry.Math.Calculus
-import Geometry.Math.Polynomial
-import Geometry.Math.Statistics
+module Geometry.Math (module X) where
+ import Geometry.Math.Calculus as X
+ import Geometry.Math.Polynomial as X
+ import Geometry.Math.Statistics as X

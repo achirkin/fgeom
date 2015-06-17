@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -29,19 +31,12 @@ import Prelude hiding (foldr, foldl, foldr1, foldl1, mapM, sequence)
 
 import Control.Applicative ( Applicative(..) )
 import Control.Monad (liftM2)
---import Data.Foldable ( Foldable(..) )
---import Data.Ix ( Ix )
---import Data.Traversable ( Traversable(..)  )
 import Foreign.Storable ( Storable(..) )
---import Data.Monoid
-
---import Foreign.Marshal.Array ( advancePtr )
---import Foreign.Ptr ( Ptr, plusPtr, castPtr )
---import GHC.TypeLits
-
-import Geometry.Space
 import Foreign.Ptr (castPtr)
 
+
+import Geometry.Space
+import Geometry.Space.Transform
 
 -----------------------------------------------------------------------------------------
 -- | Point in n-dimensional space
@@ -72,8 +67,10 @@ lineFromPP :: (Floating x, Eq x, TensorMath n 1)
            => Point n x -> Point n x -> Line n x
 lineFromPP a b = lineFromPD a (b.-a)
 
-
-
+instance (Transformable (Tensor n 1 x) x, TensorMath n 1) => Transformable (Line n x) x where
+    transform tr = lineFromPP (transform . flip wrap tr $ p0)
+                              (transform . flip wrap tr $ p0 .+ dir)
+        where Line p0 dir = unwrap tr
 
 deriving instance Eq (Vector n x) => Eq (Line n x)
 deriving instance Show (Vector n x) => Show (Line n x)
@@ -103,6 +100,11 @@ instance (Approximate (Tensor n 1 x), TensorMath n 1, Fractional x)
 data Ray n x = Ray !(Point n x) -- starting point
                    !(Vector n x) -- direction vector
 
+instance (Transformable (Tensor n 1 x) x, TensorMath n 1) => Transformable (Ray n x) x where
+    transform tr = Ray p0' (p1' .- p0')
+        where Ray p0 dir = unwrap tr
+              p0' = transform . flip wrap tr $ p0
+              p1' = transform . flip wrap tr $ p0 .+ dir
 
 deriving instance Eq (Vector n x) => Eq (Ray n x)
 deriving instance Show (Vector n x) => Show (Ray n x)
@@ -133,6 +135,10 @@ instance ( Approximate (Tensor n 1 x)
 data LineSegment n x = LineSegment !(Point n x) --  start point
                                    !(Point n x) --  end point
 
+instance (Transformable (Tensor n 1 x) x, TensorMath n 1) => Transformable (LineSegment n x) x where
+    transform tr = LineSegment (transform . flip wrap tr $ p0)
+                               (transform . flip wrap tr $ p1)
+        where LineSegment p0 p1 = unwrap tr
 
 deriving instance Eq (Vector n x) => Eq (LineSegment n x)
 deriving instance Show (Vector n x) => Show (LineSegment n x)
@@ -156,6 +162,7 @@ instance ( Approximate (Tensor n 1 x), TensorMath n 1)
     approx (LineSegment x y) = liftM2 LineSegment (approx x) (approx y)
 
 
+
 ---------------------------------------------------------------------------------------
 -- | Hyperplane in n-dimensional space
 ---------------------------------------------------------------------------------------
@@ -164,6 +171,11 @@ data HyperPlane n x = HyperPlane {
         planeNormal  :: !(Vector n x), -- ^ direction from the origin to a plane
         distToOrigin :: !x -- ^ distance from origin along the direction. Greater than 0!
     }
+
+--instance (Transformable (Tensor n 1 x) x, TensorMath n 1) => Transformable (HyperPlane n x) x where
+--    transform tr = LineSegment (transform . flip wrap tr $ p0)
+--                               (transform . flip wrap tr $ p1)
+--        where HyperPlane p0 d = unwrap tr
 
 -- | 2D plane it 3D space
 type Plane x = HyperPlane 3 x
@@ -210,6 +222,13 @@ instance (Approximate (Tensor n 1 x), TensorMath n 1, Fractional x)
 data Polygon n x = SimpleConvexPolygon [Point n x] -- ^ The simplest type of polygon
                  | SimplePolygon [Point n x] -- ^ Polygon without holes
                  | GenericPolygon [Polygon n x] -- ^ Polygon with holes
+
+instance (Transformable (Tensor n 1 x) x, TensorMath n 1) => Transformable (Polygon n x) x where
+    transform tr = case p of
+        (SimpleConvexPolygon poly) -> SimpleConvexPolygon . ftransform $ wrap poly tr
+        (SimplePolygon poly) -> SimplePolygon . ftransform $ wrap poly tr
+        (GenericPolygon inner) -> GenericPolygon . ftransform $ wrap inner tr
+        where p = unwrap tr
 
 deriving instance Eq (Vector n x) => Eq (Polygon n x)
 deriving instance Show (Vector n x) => Show (Polygon n x)

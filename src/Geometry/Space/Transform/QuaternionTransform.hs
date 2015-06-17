@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Transform.QuaternionTransform
@@ -24,24 +25,24 @@ import Geometry.Space.Tensor
 
 import Geometry.Space.Transform.SpaceTransform
 
--- | Space transform represented by Quaternion and Vector
---   Supports only rotation, uniform scale, and translate
-data QTransform t a = QTransform (Quaternion t) (Vector3 t) a
-    deriving (Eq, Ord, Bounded, Show, Read)
+type QTransform = STransform "Quaternion"
 
-instance Functor (QTransform t) where
+instance Functor (STransform "Quaternion" t) where
     fmap f (QTransform q v x) = QTransform q v (f x)
 
-instance (Floating t, Eq t) => Applicative (QTransform t) where
+instance (Floating t, Eq t) => Applicative (STransform "Quaternion" t) where
     pure = QTransform 1 zeros
     QTransform qf vf f <*> QTransform qx vx x = QTransform (qf * qx) (rotScale qf vx .+ vf) (f x)
 
-instance (Floating t, Eq t) => Monad (QTransform t) where
+instance (Floating t, Eq t) => Monad (STransform "Quaternion" t) where
     return = QTransform 1 zeros
     (QTransform q v x) >>= f = QTransform (q * q') (rotScale q v' .+ v) y
         where QTransform q' v' y = f x
 
-instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
+instance (Eq t, Floating t) => SpaceTransform "Quaternion" t where
+    -- | Space transform represented by Quaternion and Vector
+    --   Supports only rotation, uniform scale, and translate
+    data STransform "Quaternion" t a = QTransform (Quaternion t) (Vector3 t) a
     rotate v a = QTransform (axisRotation v a) zeros
     rotateX a = QTransform (Q (sin a) 0 0 (cos a)) zeros
     rotateY a = QTransform (Q 0 (sin a) 0 (cos a)) zeros
@@ -64,11 +65,11 @@ instance (Eq t, Floating t) => SpaceTransform (QTransform t) t where
                            x21 x22 x23
                            x31 x32 x33) ()
     unwrap (QTransform _ _ x) = x
-    wrap = QTransform (Q 0 0 0 1) zeros
+    wrap x (QTransform a b _) = QTransform a b x
     mapTransform (QTransform q v t) = fmap (QTransform q v) t
     liftTransform (QTransform q v t) = liftM (QTransform q v) t
-    transform tr (QTransform q v t) = fmap (\f -> f t) tr >>= translate v >>= rotateScale q
-    cotransform (QTransform q v f) = (<*>) $ wrap f >>= translate v >>= rotateScale q
+    mergeSecond tr (QTransform q v t) = fmap (\f -> f t) tr >>= translate v >>= rotateScale q
+    mergeFirst (QTransform q v f) = (<*>) $ translate v f >>= rotateScale q
 
 
 fromMatrix3x3 :: (Floating t, Eq t) => Tensor 3 3 t -> Quaternion t
@@ -91,3 +92,10 @@ fromMatrix4x4 (Matrix4x4 x11 x12 x13  _
                          x11 x12 x13
                          x21 x22 x23
                          x31 x32 x33)
+
+
+deriving instance (Eq x, Eq t) => Eq (STransform "Quaternion" t x)
+deriving instance (Ord x, Ord t) => Ord (STransform "Quaternion" t x)
+deriving instance (Bounded x, Bounded t) => Bounded (STransform "Quaternion" t x)
+deriving instance (Show x, Show t) => Show (STransform "Quaternion" t x)
+deriving instance (Read x, Read t) => Read (STransform "Quaternion" t x)

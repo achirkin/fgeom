@@ -12,12 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Geometry.Structure
-    ( module Geometry.Structure.Primitives
-    , module Geometry.Structure.BoundingBox
-    , module Geometry.Structure.EuclidianDistance
-    ) where
-
-import Geometry.Structure.Primitives
-import Geometry.Structure.BoundingBox
-import Geometry.Structure.EuclidianDistance
+module Geometry.Structure (module X) where
+ import Geometry.Structure.Primitives as X
+ import Geometry.Structure.BoundingBox as X
+ import Geometry.Structure.EuclidianDistance as X

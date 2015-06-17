@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, DataKinds #-}
+
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.MatrixTransform
@@ -23,23 +25,23 @@ import Geometry.Space.Tensor
 
 import Geometry.Space.Transform.SpaceTransform
 
--- | SpaceTransform via standard transformation matrices (homogeneous coordinates)
-data MTransform t a = MTransform (Tensor 4 4 t) a
-    deriving (Eq, Ord, Bounded, Show, Read)
+type MTransform = STransform "Matrix"
 
-instance Functor (MTransform t) where
+instance Functor (STransform "Matrix" t) where
     fmap f (MTransform m x) = MTransform m (f x)
 
-instance (Floating t, Eq t) => Applicative (MTransform t) where
+instance (Floating t, Eq t) => Applicative (STransform "Matrix" t) where
     pure = MTransform eye
     MTransform mf f <*> MTransform mx x = MTransform (mf `prod` mx) (f x)
 
-instance (Floating t, Eq t) => Monad (MTransform t) where
+instance (Floating t, Eq t) => Monad (STransform "Matrix" t) where
     return = MTransform eye
     (MTransform m x) >>= f = MTransform (m `prod` m') y
         where MTransform m' y = f x
 
-instance (Eq t, Floating t) => SpaceTransform (MTransform t) t where
+instance (Eq t, Floating t) => SpaceTransform "Matrix" t where
+    -- | STransform via standard transformation matrices (homogeneous coordinates)
+    data STransform "Matrix" t a = MTransform (Tensor 4 4 t) a
     rotate v a = MTransform (rotateM v a)
     rotateX = MTransform . rotateXM
     rotateY = MTransform . rotateYM
@@ -62,12 +64,18 @@ instance (Eq t, Floating t) => SpaceTransform (MTransform t) t where
                             0   0   0  1
     transformM4 = MTransform
     unwrap (MTransform _ v) = v
-    wrap = MTransform eye
+    wrap x (MTransform m _) = MTransform m x
     mapTransform (MTransform m t) = fmap (MTransform m) t
     liftTransform (MTransform m t) = liftM (MTransform m) t
-    transform tr (MTransform m t) = fmap (\f -> f t) tr >>= transformM4 m
-    cotransform (MTransform m f) = (<*>) $ wrap f >>= transformM4 m
+    mergeSecond tr (MTransform m t) = fmap (\f -> f t) tr >>= transformM4 m
+    mergeFirst (MTransform m f) = (<*>) $ transformM4 m f
 
+
+deriving instance (Eq x, Eq t) => Eq (STransform "Matrix" t x)
+deriving instance (Ord x, Ord t) => Ord (STransform "Matrix" t x)
+deriving instance (Bounded x, Bounded t) => Bounded (STransform "Matrix" t x)
+deriving instance (Show x, Show t) => Show (STransform "Matrix" t x)
+deriving instance (Read x, Read t) => Read (STransform "Matrix" t x)
 
 -- | translation matrix
 translateM :: Num a => Vector 3 a -> Tensor 4 4 a

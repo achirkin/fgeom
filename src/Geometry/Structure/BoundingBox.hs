@@ -25,12 +25,14 @@ module Geometry.Structure.BoundingBox
     , Boundable (..), boundPair, boundSet
     ) where
 
+import Data.Traversable (Traversable(..))
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM2)
 import Foreign.Storable ( Storable(..) )
 import Foreign.Ptr (castPtr)
 
 import Geometry.Space
+import Geometry.Space.Transform
 import Geometry.Structure.Primitives
 import qualified Data.Foldable as FL (Foldable, foldr1)
 
@@ -39,6 +41,15 @@ import qualified Data.Foldable as FL (Foldable, foldr1)
 ---------------------------------------------------------------------------------------
 
 data BoundingBox n x = BoundingBox !(Point n x) !(Point n x)
+
+instance ( Ord x, Ord (Point n x)
+         , Traversable (Tensor n 1)
+         , Applicative (Tensor n 1)
+         , Transformable (Point n x) x) => Transformable (BoundingBox n x) x where
+    -- goes through all corners of bounding box and bounds this set. Magical sequenceA!
+    transform tr = boundSet . map (transform . flip wrap tr) . sequenceA $ sequenceA [l, h]
+        where BoundingBox l h = unwrap tr
+
 
 -- | Create bounding box out of two points
 boundingBox :: (Ord x, TensorMath n 1)
@@ -88,26 +99,39 @@ instance (Approximate (Tensor n 1 x), TensorMath n 1)
 -- | Everything that can be bounded
 ---------------------------------------------------------------------------------------
 
-class Boundable a n | a -> n where
+class Boundable a n x | a -> x where
     -- | Get axis-aligned minimum bounding box for a geometric object
-    minBBox :: (Ord x, Ord (Point n x)) => a x -> BoundingBox n x
+    minBBox :: (Ord x, Ord (Point n x)) => a -> BoundingBox n x
 
-instance Boundable (BoundingBox n) n where
+instance Boundable (BoundingBox n x) n x where
     minBBox = id
 
-instance Boundable (Tensor n 1) n where
+instance Boundable (Tensor n 1 x) n x where
     minBBox x = BoundingBox x x
 
-instance (TensorMath n 1) => Boundable (LineSegment n) n where
+instance (TensorMath n 1) => Boundable (LineSegment n x) n x where
     minBBox (LineSegment x y) = boundingBox x y
 
+instance (TensorMath n 1) => Boundable (Polygon n x) n x where
+    minBBox (SimpleConvexPolygon xs) = boundSet xs
+    minBBox (SimplePolygon xs) = boundSet xs
+    minBBox (GenericPolygon ps) = boundSet ps
+
+instance ( TensorMath n 1
+         , SpaceTransform s x
+         , Transformable b x
+         , Floating x
+         , Boundable b n x)
+    => Boundable (STransform s x b) n x where
+    minBBox = minBBox . transform
 
 -- | Create a minimum bounding box for an array, a list or any other foldable functor
-boundSet :: (Ord x, Ord (Point n x), FL.Foldable f, Functor f, Boundable b n)
-         => f (b x) -> BoundingBox n x
+boundSet :: (Ord x, Ord (Point n x), FL.Foldable f, Functor f, Boundable b n x)
+         => f b -> BoundingBox n x
 boundSet = FL.foldr1 boundPair . fmap minBBox
 
 -- | Bound pair of boundable objects into one BoundingBox
-boundPair :: (Boundable a n, Ord (Point n x), Ord x)
+boundPair :: (Boundable (a x) n x, Ord (Point n x), Ord x)
           => a x -> a x -> BoundingBox n x
 boundPair x y = combineBounds (minBBox x) (minBBox y)
+
