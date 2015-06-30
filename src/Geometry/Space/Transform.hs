@@ -6,9 +6,9 @@
 --
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :  portable
 --
--- This module provides Monad-like coordinate transformations using either matrices or quaternion+vector pairs
+-- This module provides Monad-like coordinate transformations
+-- using either matrices or quaternion+vector pairs
 --
 --------------------------------------------------------------------------------
 

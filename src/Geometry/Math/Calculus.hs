@@ -7,16 +7,14 @@
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- | Some calculus methods on generic functions
+-- Some calculus methods on generic functions
 --
 -----------------------------------------------------------------------------
 
 module Geometry.Math.Calculus where
 
 import Geometry.Space
-import Control.Applicative (pure, (<*>))
 import Data.List (foldl1')
 
 -- | Number of points to use in approximation
@@ -50,18 +48,18 @@ derivative :: ( Fractional x
            -> Tensor m n x -- ^ value of the derivative
 derivative TwoPointForward dx f x = (f1 .- f0) /.. dx
     where f0 = fromRowCol . pure $ f x
-          f1 = mapColumns f $ diag dx .+ fromRowCol (pure x)
+          f1 = mapColumns f $ toDiag dx .+ fromRowCol (pure x)
 derivative TwoPointBackward dx f x = (f1 .- f0) /.. dx
-    where f0 = mapColumns f $ diag dx .- fromRowCol (pure x)
+    where f0 = mapColumns f $ toDiag dx .- fromRowCol (pure x)
           f1 = fromRowCol . pure $ f x
 derivative ThreePoint dx f x = (f1 .- f0) /.. (2*dx)
     where f0 = mapColumns f $ xm .- ddx
           f1 = mapColumns f $ xm .+ ddx
           xm = fromRowCol $ pure x
-          ddx = diag dx
+          ddx = toDiag dx
 derivative FivePoint dx f x = (/..(12*dx)) . foldl1' (.+) $ zipWith (*..) fs [1, -8, 8, -1]
     where xm = fromRowCol $ pure x
-          fs = map (mapColumns f . (xm .+ ) . diag . (dx*)) [-2,-1,1,2]
+          fs = map (mapColumns f . (xm .+ ) . toDiag . (dx*)) [-2,-1,1,2]
 
 
 -- | Calculate the second derivative of a function numerially
@@ -89,47 +87,22 @@ gradient :: ( Fractional x
          -> Vector n x
 gradient TwoPointForward dx f x = (f1 .- f0) /.. dx
     where f0 = pure $ f x
-          f1 = transpose . fmap f . toRowCol $ diag dx .+ fromRowCol (pure x)
+          f1 = transpose . fmap f . toRowCol $ toDiag dx .+ fromRowCol (pure x)
 gradient TwoPointBackward dx f x = (f1 .- f0) /.. dx
-    where f0 = transpose . fmap f . toRowCol $ diag dx .- fromRowCol (pure x)
+    where f0 = transpose . fmap f . toRowCol $ toDiag dx .- fromRowCol (pure x)
           f1 = pure $ f x
 gradient ThreePoint dx f x = (f1 .- f0) /.. (2*dx)
     where f0 = transpose . fmap f . toRowCol $ xm .- ddx
           f1 = transpose . fmap f . toRowCol $ xm .+ ddx
           xm = fromRowCol $ pure x
-          ddx = diag dx
+          ddx = toDiag dx
 gradient FivePoint dx f x = (/..(12*dx)) . foldl1' (.+) $ zipWith (*..) fs [1, -8, 8, -1]
     where xm = fromRowCol $ pure x
-          fs = map (transpose . fmap f . toRowCol . (xm .+ ) . diag . (dx*)) [-2,-1,1,2]
+          fs = map (transpose . fmap f . toRowCol . (xm .+ ) . toDiag . (dx*)) [-2,-1,1,2]
 
---divergence :: ( Fractional x
---            , TensorMath 1 n
---            , TensorMath n 1
---            , TensorMath n n
---            )
---           => ApproximationType
---           -> x -- ^ delta (precision)
---           -> (Vector n x -> Vector n x) -- ^ function to get the divergence
---           -> Vector n x -- ^ argument
---           -> x
---divergence TwoPointForward dx f x = (f1 .- f0) /.. dx
---    where f0 = fromRowCol . pure $ f x
---          f1 = f
---          xx = pure (.+) <*> (toRowCol (diag dx)) <*> (pure x)
---divergence TwoPointBackward dx f x = (f1 .- f0) /.. dx
---    where f0 = mapColumns f $ diag dx .- fromRowCol (pure x)
---          f1 = fromRowCol . pure $ f x
---divergence ThreePoint dx f x = (f1 .- f0) /.. (2*dx)
---    where f0 = mapColumns f $ xm .- ddx
---          f1 = mapColumns f $ xm .+ ddx
---          xm = fromRowCol $ pure x
---          ddx = diag dx
---divergence FivePoint dx f x = (/..(12*dx)) . foldl1' (.+) $ zipWith (*..) fs [1, -8, 8, -1]
---    where xm = fromRowCol $ pure x
---          fs = map (mapColumns f . (xm .+ ) . diag . (dx*)) [-2,-1,1,2]
 
--- | Calculate the Hessian of a function numerially
---   Scheme: `d^2 f / dx dy = ( f(x,y) + f(-x,-y) - f(x,-y) - f(-x,y) ) / (4 x y) + O(x^2 + y^2)`
+-- | Calculate the Hessian of a function numerially.
+--   Scheme: @ d^2 f \/ dx dy = ( f(x,y) + f(-x,-y) - f(x,-y) - f(-x,y) ) \/ (4 x y) + O(x^2 + y^2) @
 hessian :: ( Fractional x
            , TensorMath 1 n
            , TensorMath n 1

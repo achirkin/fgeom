@@ -10,7 +10,6 @@
 -- 
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Basic Euclidean space types - vectors and matrices; up to 4D.
 --
@@ -25,13 +24,11 @@ module Geometry.Space.Types
 
 import Prelude hiding (foldl1)
 
-import Control.Applicative ( Applicative(..) )
 import Control.Monad ( ap, void, liftM )
 import qualified Data.Foldable as Fl
 import Data.Ix ( Ix )
 import Data.Traversable ( Traversable(..), mapAccumL  )
 import Foreign.Storable ( Storable(..) )
-import Data.Monoid
 
 import Foreign.Marshal.Array ( advancePtr )
 import Foreign.Ptr ( Ptr, plusPtr, castPtr )
@@ -105,7 +102,7 @@ instance Storable a => Storable (Tensor 0 m a) where
 --------------------------------------------------------------------------------
 
 newtype instance Tensor 1 1 a = Scalar a
-    deriving (Eq, Ord, Ix, Bounded, Show, Read)
+    deriving (Eq, Ord, Ix, Show, Read)
 
 instance Functor (Tensor 1 1) where
     fmap f (Scalar x) = Scalar (f x)

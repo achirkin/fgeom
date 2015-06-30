@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
-module Geometry.Space.Matrix2x2Test where
+module VectorTests.Matrix2x2 where
 import Geometry.Space
 
 
 import Test.Framework
-import Geometry.Space.VectorGenerators ()
+import VectorTests.VectorGenerators ()
 
 
 

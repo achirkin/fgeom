@@ -8,7 +8,6 @@
 --
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- This module provides Monad-like coordinate transformations based on quaternion+vector pair
 --
@@ -16,7 +15,6 @@
 
 module Geometry.Space.Transform.QuaternionTransform where
 
-import Control.Applicative (Applicative (..))
 import Control.Monad (liftM)
 
 import Geometry.Space.Types
@@ -36,6 +34,7 @@ instance (Floating t, Eq t) => Applicative (STransform "Quaternion" t) where
 
 instance (Floating t, Eq t) => Monad (STransform "Quaternion" t) where
     return = QTransform 1 zeros
+    (QTransform q1 v1 _) >> (QTransform q2 v2 x) = QTransform (q1 * q2) (rotScale q1 v2 .+ v1) x
     (QTransform q v x) >>= f = QTransform (q * q') (rotScale q v' .+ v) y
         where QTransform q' v' y = f x
 
@@ -70,6 +69,9 @@ instance (Eq t, Floating t) => SpaceTransform "Quaternion" t where
     liftTransform (QTransform q v t) = liftM (QTransform q v) t
     mergeSecond tr (QTransform q v t) = fmap (\f -> f t) tr >>= translate v >>= rotateScale q
     mergeFirst (QTransform q v f) = (<*>) $ translate v f >>= rotateScale q
+    inverseTransform (QTransform q@(Q 0 0 0 0) v x) = QTransform q (neg v) x
+    inverseTransform (QTransform q v x) = QTransform p (neg $ rotScale p v) x
+        where p = recip q
 
 
 fromMatrix3x3 :: (Floating t, Eq t) => Tensor 3 3 t -> Quaternion t

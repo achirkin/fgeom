@@ -8,7 +8,7 @@
 -- Stability   :  Experimental
 -- Portability :  portable
 --
--- | A few methods on polynomials (mainly for evaluating the roots of a polynomial equation)
+-- A few methods on polynomials (mainly for evaluating the roots of a polynomial equation)
 --
 -----------------------------------------------------------------------------
 

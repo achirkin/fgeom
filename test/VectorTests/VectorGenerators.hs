@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -F -pgmF htfpp -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-module Geometry.Space.VectorGenerators where
+module VectorTests.VectorGenerators where
 
 import Test.Framework
 
@@ -23,6 +23,8 @@ import Data.Traversable as T
 -- | this generates data for all kinds of vectors in OpenGL at once!
 instance (Arbitrary a, Applicative t, Traversable t) => Arbitrary (t a) where
     arbitrary = T.sequence $ A.pure arbitrary
+
+
 
 --instance (Arbitrary a) => Arbitrary (Quaternion a) where
 --    arbitrary = do

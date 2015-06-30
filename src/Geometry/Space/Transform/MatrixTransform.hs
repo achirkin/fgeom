@@ -9,14 +9,12 @@
 -- 
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- This Module provides matrices
 --
 --------------------------------------------------------------------------------
 module Geometry.Space.Transform.MatrixTransform where
 
-import Control.Applicative (Applicative (..))
 import Control.Monad (liftM)
 
 import Geometry.Space.Types
@@ -36,6 +34,7 @@ instance (Floating t, Eq t) => Applicative (STransform "Matrix" t) where
 
 instance (Floating t, Eq t) => Monad (STransform "Matrix" t) where
     return = MTransform eye
+    (MTransform m1 _) >> (MTransform m2 x) = MTransform (m1 `prod` m2) x
     (MTransform m x) >>= f = MTransform (m `prod` m') y
         where MTransform m' y = f x
 
@@ -69,6 +68,7 @@ instance (Eq t, Floating t) => SpaceTransform "Matrix" t where
     liftTransform (MTransform m t) = liftM (MTransform m) t
     mergeSecond tr (MTransform m t) = fmap (\f -> f t) tr >>= transformM4 m
     mergeFirst (MTransform m f) = (<*>) $ transformM4 m f
+    inverseTransform (MTransform m x) = MTransform (invert m) x
 
 
 deriving instance (Eq x, Eq t) => Eq (STransform "Matrix" t x)

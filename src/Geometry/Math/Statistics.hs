@@ -8,9 +8,8 @@
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :  portable
 --
--- | Simple statistical functions on sets of vectors/numbers
+-- Simple statistical functions on sets of vectors/numbers
 --
 -----------------------------------------------------------------------------
 
@@ -18,7 +17,6 @@ module Geometry.Math.Statistics where
 
 import Prelude hiding (foldr,sum)
 import Data.List (sort)
-import Data.Traversable
 import Data.Foldable
 import Geometry.Space
 
@@ -61,3 +59,4 @@ median' :: (Foldable a, Ord x) => a x -> x
 median' vs = sort xs !! n2
     where n2 =  div (length xs) 2
           xs = toList vs
+

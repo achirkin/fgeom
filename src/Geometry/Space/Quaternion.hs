@@ -1,15 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
-{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE AutoDeriveTypeable #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Geometry.Space.Vector4
 -- Copyright   :  (c) Artem M. Chirkin 2015
 -- License     :  BSD3
--- 
+--
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- This Module defines Quaternion calculus
 --
@@ -21,10 +19,7 @@ import Data.Typeable
 import Data.Data (Data)
 import Foreign (Storable, castPtr, peek, poke, pokeElemOff, peekElemOff, sizeOf,
                 alignment)
-import Control.Applicative ( Applicative(..) )
 import Control.Monad ( ap )
-import Data.Foldable ( Foldable(..) )
-import Data.Traversable ( Traversable(..))
 import Data.Fixed as DF
 
 import Geometry.Space.Types

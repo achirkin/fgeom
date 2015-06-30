@@ -2,16 +2,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Geometry.Space.Approximate
 -- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- License     :  BSD3
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- | Provide approximate comparison for floats and vectors in a monadic way
+-- Provide approximate comparison for floats and vectors in a monadic way
 --
 -----------------------------------------------------------------------------
 
@@ -24,7 +23,7 @@ module Geometry.Space.Approximate
     , isSmall', areClose', approx'
     ) where
 
-import Control.Applicative ( Applicative(..) )
+
 import Foreign.C.Types (CDouble,CFloat)
 import qualified Data.Foldable as FL (foldl1)
 import qualified Data.Traversable as T (mapM)
@@ -80,7 +79,7 @@ getEps = Approximately id
 
 -- | Check if two values are close to each other.
 --   The same as `areClose`.
-(~==~) :: (Approximate a, Num (ApproxNum a), Ord (ApproxNum a))
+(~==~) :: (Approximate a, Fractional (ApproxNum a), Ord (ApproxNum a))
      => a -> a -> Approximately (ApproxNum a) Bool
 infix 4 ~==~
 (~==~) = areClose
@@ -96,14 +95,14 @@ mergeApprox mm = Approximately $ \eps -> runApprox (runApprox mm eps) eps
 -- | Check if two vectors are co-directed (parallel and oriented same way)
 areCodirected :: (TensorMath n 1, Ord x, Num x)
               => Vector n x -> Vector n x -> Approximately x Bool
-areCodirected v u = Approximately $ (vu > 0 &&) . (m - vu*vu < ) . (m*)
+areCodirected v u = Approximately $ (vu > 0 &&) . (m - vu*vu < ) . (m*) . (^(2::Int))
     where vu = v .*. u
           m = normL2Squared v * normL2Squared u
 
 -- | Check if two vectors are parallel (i.e. if `exists x: x*v == w`)
 areParallel :: (TensorMath n 1, Ord x, Num x)
             => Vector n x -> Vector n x -> Approximately x Bool
-areParallel v u = Approximately $ (m - vu*vu < ) . (m*)
+areParallel v u = Approximately $ (m - vu*vu < ) . (m*) . (^(2::Int))
     where vu = v .*. u
           m = normL2Squared v * normL2Squared u
 
@@ -112,7 +111,9 @@ areOrthogonal :: ( Approximate (Tensor n 1 x)
                  , TensorMath n 1
                  , Ord x, Num x)
               => Vector n x -> Vector n x -> Approximately x Bool
-areOrthogonal v w = isSmall' $ v .*. w
+areOrthogonal v u = Approximately $ (vu*vu < ) . (m*) . (^(2::Int))
+    where vu = v .*. u
+          m = normL2Squared v * normL2Squared u
 
 
 instance (Num eps, Show a) => Show (Approximately eps a) where
@@ -169,11 +170,13 @@ instance (Approximate a, x ~ ApproxNum a)
         areClose x y
     approx = return
 
-instance (TensorMath n m)
-         => Approximate (Tensor n m x) where
+instance TensorMath n m => Approximate (Tensor n m x) where
     type ApproxNum (Tensor n m x) = x
-    isSmall v = Approximately $ \eps -> FL.foldl1 (&&) . fmap ((< eps) . abs) $ v
-    areClose x y = isSmall $ x .- y
+    isSmall v = Approximately $ FL.foldl1 (&&) . flip fmap v . (. abs) . (>=)
+    areClose x y = Approximately $ FL.foldl1 (&&) . flip fmap v . (>=) . (su *)
+        where su = FL.foldl1 f x + FL.foldl1 f y
+              f acc c = max acc $ abs c
+              v = fmap abs $ (y.-x)*..2
     approx = T.mapM approx'
 
 --------------------------------------------------------------------------------
@@ -204,11 +207,11 @@ instance ApproxOrd CFloat where
     x ~>=~ y = Approximately $ (x - y >= ) . negate
     x ~<=~ y = Approximately $ (y - x >= ) . negate
 
-instance (TensorMath n m) => ApproxOrd (Tensor n m x) where
-    x ~>~ y = Approximately $ \eps -> FL.foldl1 (&&) . fmap (> eps) $ x .- y
-    x ~<~ y = Approximately $ \eps -> FL.foldl1 (&&) . fmap (> eps) $ y .- x
-    x ~>=~ y = Approximately $ \eps -> FL.foldl1 (&&) . fmap (>= -eps) $ x .- y
-    x ~<=~ y = Approximately $ \eps -> FL.foldl1 (&&) . fmap (>= -eps) $ y .- x
+instance TensorMath n m => ApproxOrd (Tensor n m x) where
+    x ~>~ y = Approximately $ FL.foldl1 (&&) . flip fmap (x .- y) . (<)
+    x ~<~ y = Approximately $ FL.foldl1 (&&) . flip fmap (y .- x) . (<)
+    x ~>=~ y = Approximately $ FL.foldl1 (&&) . flip fmap (x .- y) . (<=) . negate
+    x ~<=~ y = Approximately $ FL.foldl1 (&&) . flip fmap (y .- x) . (<=) . negate
 
 
 --------------------------------------------------------------------------------
@@ -223,7 +226,7 @@ isSmall' = Approximately . (<=) . abs
 -- | areClose for numerics
 areClose' :: (Num a, Ord a)
           => a -> a -> Approximately a Bool
-areClose' x y = isSmall' $ x - y
+areClose' x y = Approximately $ (2*abs(x-y) <= ) . ((abs x + abs y)*)
 
 -- | approx for numerics
 approx' :: (RealFloat a)
@@ -238,39 +241,3 @@ approx' x = do
     else if ex+ee >= emax then return x
     else return . scaleFloat (-ed) . fromIntegral $ (round . scaleFloat ed $ x :: Int)
 
---areParallel' :: (TensorMath n 1, Ord x, Eq x, Fractional x)
---             => Bool -> Vector n x -> Vector n x -> Approximately x Bool
---areParallel' dir v w = do
---    eps <- getEps
---    return (v2w - vw*vw < v2w*eps) && (dir )
---    let comps = T.sequence (pure (check eps) <*> w <*> v)
---                >>= sequence . filter (Nothing /=) . FL.toList
---    case comps of
---        Nothing -> return False
---        Just [] -> return False
---        Just ((True,(x,y)):xs) -> liftM (((x*y > 0 || dir)  &&) . and) . sequence
---            $ fmap (\(_,(xi,yi)) -> areClose' (y/x) (yi/xi)) xs
---        Just ((False,(x,y)):xs) -> liftM (((x*y > 0 || dir)  &&) . and) . sequence
---            $ fmap (\(_,(xi,yi)) -> areClose' (x/y) (xi/yi)) xs
---    where vw = v .*. v
---          v2w = normL2Squared v * normL2Squared w
-
-
---areParallel' dir v w = do
---    eps <- getEps
---    let comps = T.sequence (pure (check eps) <*> w <*> v)
---                >>= sequence . filter (Nothing /=) . FL.toList
---    case comps of
---        Nothing -> return False
---        Just [] -> return False
---        Just ((True,(x,y)):xs) -> liftM (((x*y > 0 || dir)  &&) . and) . sequence
---            $ fmap (\(_,(xi,yi)) -> areClose' (y/x) (yi/xi)) xs
---        Just ((False,(x,y)):xs) -> liftM (((x*y > 0 || dir)  &&) . and) . sequence
---            $ fmap (\(_,(xi,yi)) -> areClose' (x/y) (xi/yi)) xs
---    where check eps x y | ax <- abs x,
---                          ex <- ax <= eps,
---                          ay <- abs y,
---                          ey <- ay <= eps
---            = if ex /= ey then Nothing
---              else if ey && ex then Just Nothing
---              else Just $ Just (ax > ay, (x,y))

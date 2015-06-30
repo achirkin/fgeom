@@ -1,10 +1,12 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
-module Geometry.Math.PolynomialTest where
+module MathTests.Polynomial where
 
 import Data.Foldable (foldl')
+import qualified Control.Monad as M
 
 import Test.Framework
 import Geometry.Math.Polynomial
+import Geometry.Space.Approximate
 
 
 prop_polyRootsR1 :: Double -> Double -> Bool
@@ -22,7 +24,7 @@ prop_polyRootsR2 a b c = all (\y -> abs y <= mag*10e-10) vals
           mag = maximum . map (polyModulus poly) $ xs
 
 prop_polyRootsR3 :: Double -> Double -> Double -> Double -> Bool
-prop_polyRootsR3 a b c d = all (\y -> abs y <= mag*10e-10) vals
+prop_polyRootsR3 a b c d = all (\y -> abs y <= mag*10e-8) vals
     where xs = polyRootReal poly
           poly = [d,c,b,a]
           vals = map (polyValueWide poly) xs
@@ -54,7 +56,8 @@ prop_polyRootsI5 a b c d e f = polyRootsR5
 
 
 polyRootsR4 :: Double -> Double -> Double -> Double -> Double -> Bool
-polyRootsR4 a b c d e = all (\y -> abs y <= mag*10e-10) vals
+polyRootsR4 0 0 0 0 0 = True
+polyRootsR4 a b c d e = runApprox (M.liftM and $ mapM (isSmall' . (/mag)) vals) 10e-8
     where xs = polyRootReal poly
           poly = [e,d,c,b,a]
           vals = map (polyValueWide poly) xs

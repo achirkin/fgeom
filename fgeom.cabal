@@ -1,7 +1,7 @@
 name: fgeom
-version: 0.2.1
+version: 0.2.2
 cabal-version: >=1.18
-build-type: Simple
+build-type: Custom
 license: BSD3
 license-file: LICENSE
 copyright: Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
@@ -9,50 +9,85 @@ maintainer: Artem M. Chirkin <chirkin@arch.ethz.ch>
 stability: Experimental
 homepage: http://www.ia.arch.ethz.ch/chirkin/
 synopsis: Functional-style geometry in 2D and 3D
-description: This experimental package contains geometry types and functions
+description:
+    This experimental package contains geometry types and functions
 category: Math, Geometry
 author: Artem M. Chirkin <chirkin@arch.ethz.ch>
-data-dir: ""
 
 library
-    build-depends: base >=4 && <5
-    exposed-modules: Geometry.Math Geometry.Space
-                     Geometry.Space.Quaternion Geometry.Space.Transform
-                     Geometry.Structure
-    exposed: True
-    buildable: True
+    exposed-modules:
+        Geometry.Math
+        Geometry.Space
+        Geometry.Space.Quaternion
+        Geometry.Space.Transform
+        Geometry.Structure
+    build-depends:
+        base >=4 && <5
     default-language: Haskell2010
     hs-source-dirs: src
-    other-modules: Geometry.Space.Approximate Geometry.Space.Tensor
-                   Geometry.Space.Types Geometry.Space.Transform.SpaceTransform
-                   Geometry.Space.Transform.QuaternionTransform
-                   Geometry.Space.Transform.MatrixTransform Geometry.Math.Calculus
-                   Geometry.Math.Polynomial Geometry.Math.Statistics
-                   Geometry.Structure.BoundingBox Geometry.Structure.EuclidianDistance
-                   Geometry.Structure.Primitives
+    other-modules:
+        Geometry.Space.Approximate
+        Geometry.Space.Tensor
+        Geometry.Space.Types
+        Geometry.Space.Transform.SpaceTransform
+        Geometry.Space.Transform.QuaternionTransform
+        Geometry.Space.Transform.MatrixTransform
+        Geometry.Math.Calculus
+        Geometry.Math.Optimization
+        Geometry.Math.Polynomial
+        Geometry.Math.Statistics
+        Geometry.Structure.BoundingBox
+        Geometry.Structure.EuclidianDistance
+        Geometry.Structure.Primitives
     ghc-options: -Wall
 
 test-suite VectorTests
-    build-depends: HTF >0.9 && <=1, base >=4 && <5
     type: exitcode-stdio-1.0
     main-is: VectorTests.hs
-    buildable: True
+    build-depends:
+        HTF >0.9 && <=1,
+        base >=4 && <5
     default-language: Haskell2010
     hs-source-dirs: src test
-    other-modules: Geometry.Space Geometry.Space.Transform
-                   Geometry.Space.Quaternion Geometry.Space.Vector3Test
-                   Geometry.Space.Matrix4x4Test Geometry.Space.Matrix3x3Test
-                   Geometry.Space.Matrix2x2Test Geometry.Space.Vector4Test
-                   Geometry.Space.VectorGenerators Geometry.Math.Polynomial
-                   Geometry.Math.PolynomialTest
-                   Geometry.Structure.EuclidianDistanceTest
+    other-modules:
+        VectorTests.Vector3
+        VectorTests.Matrix4x4
+        VectorTests.Matrix3x3
+        VectorTests.Matrix2x2
+        VectorTests.Vector4
+        VectorTests.VectorGenerators
+    ghc-options: -Wall -rtsopts
+test-suite GeometryTests
+    type: exitcode-stdio-1.0
+    main-is: GeometryTests.hs
+    build-depends:
+        HTF >0.9 && <=1,
+        base >=4 && <5
+    default-language: Haskell2010
+    hs-source-dirs: src test
+    other-modules:
+        VectorTests.VectorGenerators
+        GeometryTests.EuclidianDistance
+    ghc-options: -Wall -rtsopts
+test-suite MathTests
+    type: exitcode-stdio-1.0
+    main-is: MathTests.hs
+    build-depends:
+        HTF >0.9 && <=1,
+        base >=4 && <5
+    default-language: Haskell2010
+    hs-source-dirs: src test
+    other-modules:
+        MathTests.Optimization
+        MathTests.Polynomial
     ghc-options: -Wall -rtsopts
 
 benchmark VectorBenches
-    build-depends: base >=4 && <5, criterion -any
     type: exitcode-stdio-1.0
     main-is: VectorBenches.hs
-    buildable: True
+    build-depends:
+        base >=4 && <5,
+        criterion >=1 && <1.2
     default-language: Haskell2010
     hs-source-dirs: src bench
-    ghc-options: -Wall -O2 -fprof-auto -threaded
+    ghc-options: -Wall -O2 -threaded -fprof-auto "-with-rtsopts=-N -p -s -h -i0.1"

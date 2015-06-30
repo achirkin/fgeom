@@ -5,26 +5,21 @@
 {-# LANGUAGE TypeFamilies, DataKinds #-}
 
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Geometry.Space.Tensor
 -- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- License     :  BSD3
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- |
+-- All operations on vector and matrices
 --
 -----------------------------------------------------------------------------
 
 module Geometry.Space.Tensor where
 
 import GHC.TypeLits
-
-import Control.Applicative ( Applicative(..) )
-import Data.Foldable ( Foldable(..) )
-import Data.Traversable ( Traversable(..)  )
 
 import Geometry.Space.Types
 
@@ -41,7 +36,7 @@ class ( Functor (Tensor n m)
     -- | Tensor with 1 on diagonal and 0 elsewhere
     eye :: (Num x) => Tensor n m x
     -- | Put the same value on the matrix diagonal, 0 otherwise
-    diag :: (Num x) => x -> Tensor n m x
+    toDiag :: (Num x) => x -> Tensor n m x
     -- | Point-wise addition
     infixl 6 .+
     (.+) :: (Num x) => Tensor n m x -> Tensor n m x -> Tensor n m x
@@ -52,7 +47,7 @@ class ( Functor (Tensor n m)
     infixl 7 .*
     (.*) :: (Num x) => Tensor n m x -> Tensor n m x -> Tensor n m x
     -- | Negate vector (i.e. each element)
-    -- > neg x = zeros .- x 
+    --   neg x = zeros .- x 
     neg  :: (Num x) => Tensor n m x -> Tensor n m x
     -- | Point-wise devision
     infixl 7 ./
@@ -77,9 +72,9 @@ class ( Functor (Tensor n m)
     infixl 7 ../
     (../) :: (Fractional x) => x -> Tensor n m x -> Tensor n m x
     -- | Put vector values on the matrix diagonal
-    diagn :: (Num x) => Vector n x -> Tensor n m x
+    toDiagn :: (Num x) => Vector n x -> Tensor n m x
     -- | Put vector values on the matrix diagonal
-    diagm :: (Num x) => Covector m x -> Tensor n m x
+    toDiagm :: (Num x) => Covector m x -> Tensor n m x
     -- | Matrix to column of row vectors
     toColRow :: Tensor n m x -> Vector n (Covector m x)
     -- | Matrix to row of column vectors
@@ -92,6 +87,8 @@ class ( Functor (Tensor n m)
     transpose :: Tensor n m x -> Tensor m n x
     -- | Take minimum and maximum between two tensors coordinate-wise
     minmax :: (Ord x) => Tensor n m x -> Tensor n m x -> (Tensor n m x, Tensor n m x)
+    -- | Fold diagonal elements
+    foldDiag :: (x -> x -> x) -> Tensor n m x -> x
 
 -- | Square matrix-specific operations
 class (TensorMath n n) => SquareMatrix (n::Nat) where
@@ -99,14 +96,17 @@ class (TensorMath n n) => SquareMatrix (n::Nat) where
     det :: (Num x) => Tensor n n x -> x
     -- | sum of diagonal elements
     trace :: (Num x) => Tensor n n x -> x
-    -- | Right-side division
     infixl 7 //
+    -- | Right-side division
     (//) :: (Fractional x) => Tensor n n x -> Tensor n n x  -> Tensor n n x
-    -- | Left-side division
     infixr 7 \\
+    -- | Left-side division
     (\\) :: (Fractional x) => Tensor n n x  -> Tensor n n x  -> Tensor n n x
     -- | Invert the tensor
-    invert :: (Fractional x) => Tensor n n x  -> Tensor n n x 
+    invert :: (Fractional x) => Tensor n n x  -> Tensor n n x
+    -- | Get the diagonal elements from the matrix
+    diag :: Tensor n n x -> Tensor n 1 x
+
 
 --------------------------------------------------------------------------------
 -- Custom functions on Tensors
@@ -142,6 +142,30 @@ prodT :: ( Num x
 prodT a b = pure (.*.) <*> leftRows <*> rightCols
     where leftRows = mapRows pure a
           rightCols = transpose . mapRows pure $ b
+
+-- {-# RULES
+--  "prod+transpose" forall
+--    (a :: ( Num x
+--        , TensorMath n m
+--        , TensorMath m n
+--        , TensorMath n k
+--        , TensorMath m k
+--        , TensorMath 1 n
+--        , TensorMath 1 m
+--        , TensorMath 1 k
+--        , TensorMath n 1
+--        , TensorMath m 1) => Tensor n k x)
+--    (b :: ( Num x
+--        , TensorMath n m
+--        , TensorMath m n
+--        , TensorMath n k
+--        , TensorMath m k
+--        , TensorMath 1 n
+--        , TensorMath 1 m
+--        , TensorMath 1 k
+--        , TensorMath n 1
+--        , TensorMath m 1) => Tensor m k x).  prod a (transpose b) = prodT a b
+--    #-}
 
 -- | Functorial map w.r.t. rows
 mapColumns :: ( TensorMath k m
@@ -183,7 +207,7 @@ instance TensorMath 1 1 where
     zeros = Scalar 0
     ones = Scalar 1
     eye = Scalar 1
-    diag = Scalar
+    toDiag = Scalar
     (Scalar a) .+ (Scalar p) = Scalar (a+p)
     (Scalar a) .- (Scalar p) = Scalar (a-p)
     neg (Scalar a) = Scalar (negate a)
@@ -194,8 +218,8 @@ instance TensorMath 1 1 where
     (Scalar a) .*. (Scalar p) = a*p
     (Scalar x) /.. c = Scalar (x/c)
     c ../ (Scalar x) = Scalar (c/x)
-    diagn = id
-    diagm = id
+    toDiagn = id
+    toDiagm = id
     toColRow (Scalar a) = Scalar (Scalar a)
     toRowCol (Scalar a) = Scalar (Scalar a)
     fromColRow (Scalar (Scalar a)) = Scalar a
@@ -204,6 +228,7 @@ instance TensorMath 1 1 where
     minmax (Scalar x) (Scalar y)
         = ( Scalar l1, Scalar h1)
             where (l1,h1) = minmax' x y
+    foldDiag _ (Scalar x) = x
 
 instance SquareMatrix 1 where
     det (Scalar x) = x
@@ -211,6 +236,7 @@ instance SquareMatrix 1 where
     Scalar x // Scalar y = Scalar (x/y)
     Scalar x \\ Scalar y = Scalar (y/x)
     invert (Scalar x) = Scalar $ recip x
+    diag = id
 
 --------------------------------------------------------------------------------
 -- 2D Vector
@@ -220,7 +246,7 @@ instance TensorMath 2 1 where
     zeros = Vector2 0 0
     ones = Vector2 1 1
     eye = Vector2 1 0
-    diag x = Vector2 x 0
+    toDiag x = Vector2 x 0
     (Vector2 a b) .+ (Vector2 p q) = Vector2 (a+p) (b+q)
     (Vector2 a b) .- (Vector2 p q) = Vector2 (a-p) (b-q)
     neg (Vector2 a b) = Vector2 (negate a) (negate b)
@@ -231,8 +257,8 @@ instance TensorMath 2 1 where
     (Vector2 a b) .*. (Vector2 p q) = a*p + b*q
     (Vector2 x y) /.. c = Vector2 (x/c) (y/c)
     c ../ (Vector2 x y) = Vector2 (c/x) (c/y)
-    diagn (Vector2 a _) = Vector2 a 0
-    diagm (Scalar a) = Vector2 a 0
+    toDiagn (Vector2 a _) = Vector2 a 0
+    toDiagm (Scalar a) = Vector2 a 0
     toColRow = fmap Scalar
     toRowCol = Scalar
     fromColRow (Vector2 (Scalar x) (Scalar y)) = Vector2 x y
@@ -240,12 +266,13 @@ instance TensorMath 2 1 where
     transpose (Vector2 x y) = Covector2 x y
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Vector2 x _) = x
 
 instance TensorMath 1 2 where
     zeros = Covector2 0 0
     ones = Covector2 1 1
     eye = Covector2 1 0
-    diag x = Covector2 x 0
+    toDiag x = Covector2 x 0
     (Covector2 a b) .+ (Covector2 p q) = Covector2 (a+p) (b+q)
     (Covector2 a b) .- (Covector2 p q) = Covector2 (a-p) (b-q)
     neg (Covector2 a b) = Covector2 (negate a) (negate b)
@@ -256,8 +283,8 @@ instance TensorMath 1 2 where
     (Covector2 a b) .*. (Covector2 p q) = a*p + b*q
     (Covector2 x y) /.. c = Covector2 (x/c) (y/c)
     c ../ (Covector2 x y) = Covector2 (c/x) (c/y)
-    diagn (Scalar a) = Covector2 a 0
-    diagm (Covector2 a _) = Covector2 a 0
+    toDiagn (Scalar a) = Covector2 a 0
+    toDiagm (Covector2 a _) = Covector2 a 0
     toColRow = Scalar
     toRowCol = fmap Scalar
     fromColRow (Scalar v) = v
@@ -265,6 +292,7 @@ instance TensorMath 1 2 where
     transpose (Covector2 x y) = Vector2 x y
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Covector2 x _) = x
 
 --------------------------------------------------------------------------------
 -- 3D Vector
@@ -274,7 +302,7 @@ instance TensorMath 3 1 where
     zeros = Vector3 0 0 0
     ones = Vector3 1 1 1
     eye = Vector3 1 0 0
-    diag x = Vector3 x 0 0
+    toDiag x = Vector3 x 0 0
     (Vector3 a b c) .+ (Vector3 p q r) = Vector3 (a+p) (b+q) (c+r)
     (Vector3 a b c) .- (Vector3 p q r) = Vector3 (a-p) (b-q) (c-r)
     neg (Vector3 a b c) = Vector3 (negate a) (negate b) (negate c)
@@ -285,8 +313,8 @@ instance TensorMath 3 1 where
     (Vector3 a b c) .*. (Vector3 p q r) = a*p + b*q + c*r
     (Vector3 x y z) /.. c = Vector3 (x/c) (y/c) (z/c)
     c ../ (Vector3 x y z) = Vector3 (c/x) (c/y) (c/z)
-    diagn (Vector3 a _ _) = Vector3 a 0 0
-    diagm (Scalar a) = Vector3 a 0 0
+    toDiagn (Vector3 a _ _) = Vector3 a 0 0
+    toDiagm (Scalar a) = Vector3 a 0 0
     toColRow = fmap Scalar
     toRowCol = Scalar
     fromColRow (Vector3 (Scalar x) (Scalar y) (Scalar z)) = Vector3 x y z
@@ -294,12 +322,13 @@ instance TensorMath 3 1 where
     transpose (Vector3 x y z) = Covector3 x y z
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Vector3 x _ _) = x
 
 instance TensorMath 1 3 where
     zeros = Covector3 0 0 0
     ones = Covector3 1 1 1
     eye = Covector3 1 0 0
-    diag x = Covector3 x 0 0
+    toDiag x = Covector3 x 0 0
     (Covector3 a b c) .+ (Covector3 p q r) = Covector3 (a+p) (b+q) (c+r)
     (Covector3 a b c) .- (Covector3 p q r) = Covector3 (a-p) (b-q) (c-r)
     neg (Covector3 a b c) = Covector3 (negate a) (negate b) (negate c)
@@ -310,8 +339,8 @@ instance TensorMath 1 3 where
     (Covector3 a b c) .*. (Covector3 p q r) = a*p + b*q + c*r
     (Covector3 x y z) /.. c = Covector3 (x/c) (y/c) (z/c)
     c ../ (Covector3 x y z) = Covector3 (c/x) (c/y) (c/z)
-    diagn (Scalar a) = Covector3 a 0 0
-    diagm (Covector3 a _ _) = Covector3 a 0 0
+    toDiagn (Scalar a) = Covector3 a 0 0
+    toDiagm (Covector3 a _ _) = Covector3 a 0 0
     toColRow = Scalar
     toRowCol = fmap Scalar
     fromColRow (Scalar v) = v
@@ -319,6 +348,7 @@ instance TensorMath 1 3 where
     transpose (Covector3 x y z) = Vector3 x y z
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Covector3 x _ _) = x
 
 --------------------------------------------------------------------------------
 -- 4D Vector
@@ -328,7 +358,7 @@ instance TensorMath 4 1 where
     zeros = Vector4 0 0 0 0
     ones = Vector4 1 1 1 1
     eye = Vector4 1 0 0 0
-    diag x = Vector4 x 0 0 0
+    toDiag x = Vector4 x 0 0 0
     Vector4 a b c d .+ Vector4 p q r s = Vector4 (a+p) (b+q) (c+r) (d+s)
     Vector4 a b c d .- Vector4 p q r s = Vector4 (a-p) (b-q) (c-r) (d-s)
     neg (Vector4 a b c d) = Vector4 (negate a) (negate b) (negate c) (negate d)
@@ -339,8 +369,8 @@ instance TensorMath 4 1 where
     Vector4 a b c d .*. Vector4 p q r s = a*p + b*q + c*r + s*d
     Vector4 x y z w /.. c = Vector4 (x/c) (y/c) (z/c) (w/c)
     c ../ (Vector4 x y z w) = Vector4 (c/x) (c/y) (c/z) (c/w)
-    diagn (Vector4 a _ _ _) = Vector4 a 0 0 0
-    diagm (Scalar a) = Vector4 a 0 0 0
+    toDiagn (Vector4 a _ _ _) = Vector4 a 0 0 0
+    toDiagm (Scalar a) = Vector4 a 0 0 0
     toColRow = fmap Scalar
     toRowCol = Scalar
     fromColRow (Vector4 (Scalar x) (Scalar y) (Scalar z) (Scalar w)) = Vector4 x y z w
@@ -348,12 +378,13 @@ instance TensorMath 4 1 where
     transpose (Vector4 x y z w) = Covector4 x y z w
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Vector4 x _ _ _) = x
 
 instance TensorMath 1 4 where
     zeros = Covector4 0 0 0 0
     ones = Covector4 1 1 1 1
     eye = Covector4 1 0 0 0
-    diag x = Covector4 x 0 0 0
+    toDiag x = Covector4 x 0 0 0
     Covector4 a b c d .+ Covector4 p q r s = Covector4 (a+p) (b+q) (c+r) (d+s)
     Covector4 a b c d .- Covector4 p q r s = Covector4 (a-p) (b-q) (c-r) (d-s)
     neg (Covector4 a b c d) = Covector4 (negate a) (negate b) (negate c) (negate d)
@@ -364,8 +395,8 @@ instance TensorMath 1 4 where
     Covector4 a b c d .*. Covector4 p q r s = a*p + b*q + c*r + s*d
     Covector4 x y z w /.. c = Covector4 (x/c) (y/c) (z/c) (w/c)
     c ../ (Covector4 x y z w) = Covector4 (c/x) (c/y) (c/z) (c/w)
-    diagn (Scalar a) = Covector4 a 0 0 0
-    diagm (Covector4 a _ _ _) = Covector4 a 0 0 0
+    toDiagn (Scalar a) = Covector4 a 0 0 0
+    toDiagm (Covector4 a _ _ _) = Covector4 a 0 0 0
     toColRow = Scalar
     toRowCol = fmap Scalar
     fromColRow (Scalar v) = v
@@ -373,6 +404,7 @@ instance TensorMath 1 4 where
     transpose (Covector4 x y z w) = Vector4 x y z w
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag _ (Covector4 x _ _ _) = x
 
 --------------------------------------------------------------------------------
 -- 2x2 Square Matrix
@@ -382,7 +414,7 @@ instance TensorMath 2 2 where
     zeros = Matrix2x2 0 0 0 0
     ones = Matrix2x2 1 1 1 1
     eye = Matrix2x2 1 0 0 1
-    diag x = Matrix2x2 x 0 0 x
+    toDiag x = Matrix2x2 x 0 0 x
     Matrix2x2 x11 x12
               x21 x22 .+
               Matrix2x2 y11 y12
@@ -433,8 +465,8 @@ instance TensorMath 2 2 where
                     x21 x22 = Matrix2x2
         (c/x11) (c/x12)
         (c/x21) (c/x22)
-    diagn (Vector2 x y) = Matrix2x2 x 0 0 y
-    diagm (Covector2 x y) = Matrix2x2 x 0 0 y
+    toDiagn (Vector2 x y) = Matrix2x2 x 0 0 y
+    toDiagm (Covector2 x y) = Matrix2x2 x 0 0 y
     toColRow (Matrix2x2 x11 x12 x21 x22) = Vector2 (Covector2 x11 x12) (Covector2 x21 x22)
     toRowCol (Matrix2x2 x11 x12 x21 x22) = Covector2 (Vector2 x11 x21) (Vector2 x12 x22)
     fromColRow (Vector2 (Covector2 x11 x12) (Covector2 x21 x22)) = Matrix2x2 x11 x12 x21 x22
@@ -442,15 +474,18 @@ instance TensorMath 2 2 where
     transpose (Matrix2x2 x11 x12 x21 x22) = Matrix2x2 x11 x21 x12 x22
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix2x2 x11 _
+                          _ x22) = x11 `f` x22
 
 
 instance SquareMatrix 2 where
-    det (Matrix2x2 x11 x12 x21 x22) = x11*x12 - x21*x22
+    det (Matrix2x2 x11 x12 x21 x22) = x11*x22 - x21*x12
     trace (Matrix2x2 x11 _ _ x22)= x11 + x22
     a // b = prod a $ invert b
     a \\ b = prod (invert a) b
     invert m@(Matrix2x2 x11 x12 x21 x22) = Matrix2x2 (x22/d) (-x12/d) (-x21/d) (x11/d)
         where d = det m
+    diag (Matrix2x2 x11 _ _ x22) = Vector2 x11 x22
 
 --------------------------------------------------------------------------------
 -- 2x3 Matrix
@@ -463,7 +498,7 @@ instance TensorMath 2 3 where
                      1 1 1
     eye = Matrix2x3 1 0 0
                     0 1 0
-    diag x = Matrix2x3 x 0 0
+    toDiag x = Matrix2x3 x 0 0
                        0 x 0
     Matrix2x3 x11 x12 x13
               x21 x22 x23 .+
@@ -515,9 +550,9 @@ instance TensorMath 2 3 where
                     x21 x22 x23 = Matrix2x3
         (c/x11) (c/x12) (c/x13)
         (c/x21) (c/x22) (c/x23)
-    diagn (Vector2 x y) = Matrix2x3 x 0 0
+    toDiagn (Vector2 x y) = Matrix2x3 x 0 0
                                     0 y 0
-    diagm (Covector3 x y _) = Matrix2x3 x 0 0
+    toDiagm (Covector3 x y _) = Matrix2x3 x 0 0
                                         0 y 0
     toColRow (Matrix2x3 x11 x12 x13
                         x21 x22 x23) = Vector2
@@ -544,6 +579,8 @@ instance TensorMath 2 3 where
         x13 x23
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix2x3 x11 _ _
+                          _ x22 _) = x11 `f` x22
 
 --------------------------------------------------------------------------------
 -- 2x4 Matrix
@@ -556,7 +593,7 @@ instance TensorMath 2 4 where
                      1 1 1 1
     eye = Matrix2x4 1 0 0 0
                     0 1 0 0
-    diag x = Matrix2x4 x 0 0 0
+    toDiag x = Matrix2x4 x 0 0 0
                        0 x 0 0
     Matrix2x4 x11 x12 x13 x14
               x21 x22 x23 x24 .+
@@ -608,9 +645,9 @@ instance TensorMath 2 4 where
                     x21 x22 x23 x24 = Matrix2x4
         (c/x11) (c/x12) (c/x13) (c/x14)
         (c/x21) (c/x22) (c/x23) (c/x24)
-    diagn (Vector2 x y) = Matrix2x4 x 0 0 0
+    toDiagn (Vector2 x y) = Matrix2x4 x 0 0 0
                                     0 y 0 0
-    diagm (Covector4 x y _ _) = Matrix2x4 x 0 0 0
+    toDiagm (Covector4 x y _ _) = Matrix2x4 x 0 0 0
                                           0 y 0 0
     toColRow (Matrix2x4 x11 x12 x13 x14
                         x21 x22 x23 x24) = Vector2
@@ -640,6 +677,8 @@ instance TensorMath 2 4 where
         x14 x24
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix2x4 x11 _ _ _
+                          _ x22 _ _) = x11 `f` x22
 
 --------------------------------------------------------------------------------
 -- 3x2 Matrix
@@ -655,7 +694,7 @@ instance TensorMath 3 2 where
     eye = Matrix3x2 1 0
                     0 1
                     0 0
-    diag x = Matrix3x2 x 0
+    toDiag x = Matrix3x2 x 0
                        0 x
                        0 0
     Matrix3x2 x11 x12
@@ -733,10 +772,10 @@ instance TensorMath 3 2 where
         (c/x11) (c/x12)
         (c/x21) (c/x22)
         (c/x31) (c/x32)
-    diagn (Vector3 x y _) = Matrix3x2 x 0
+    toDiagn (Vector3 x y _) = Matrix3x2 x 0
                                       0 y
                                       0 0
-    diagm (Covector2 x y) = Matrix3x2 x 0
+    toDiagm (Covector2 x y) = Matrix3x2 x 0
                                       0 y
                                       0 0
     toColRow (Matrix3x2 x11 x12
@@ -768,6 +807,9 @@ instance TensorMath 3 2 where
         x12 x22 x32
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix3x2 x1 _
+                          _ x2
+                          _ _) = x1 `f` x2
 
 --------------------------------------------------------------------------------
 -- 3x3 Square Matrix
@@ -783,7 +825,7 @@ instance TensorMath 3 3 where
     eye = Matrix3x3 1 0 0
                     0 1 0
                     0 0 1
-    diag x = Matrix3x3 x 0 0
+    toDiag x = Matrix3x3 x 0 0
                        0 x 0
                        0 0 x
     Matrix3x3 x11 x12 x13
@@ -861,10 +903,10 @@ instance TensorMath 3 3 where
         (c/x11) (c/x12) (c/x13)
         (c/x21) (c/x22) (c/x23)
         (c/x31) (c/x32) (c/x33)
-    diagn (Vector3 x y z) = Matrix3x3 x 0 0
+    toDiagn (Vector3 x y z) = Matrix3x3 x 0 0
                                       0 y 0
                                       0 0 z
-    diagm (Covector3 x y z) = Matrix3x3 x 0 0
+    toDiagm (Covector3 x y z) = Matrix3x3 x 0 0
                                         0 y 0
                                         0 0 z
     toColRow (Matrix3x3 x11 x12 x13
@@ -899,9 +941,14 @@ instance TensorMath 3 3 where
         x13 x23 x33
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix3x3 x1 _ _
+                          _ x2 _
+                          _ _ x3) = x1 `f` x2 `f` x3
 
 instance SquareMatrix 3 where
-    det (Matrix3x3 x11 x12 x13 x21 x22 x23 x31 x32 x33) 
+    det (Matrix3x3 x11 x12 x13
+                   x21 x22 x23
+                   x31 x32 x33) 
         = x11*(x22*x33 - x23*x32)
         - x12*(x21*x33 - x31*x23)
         + x13*(x21*x32 - x22*x31)
@@ -921,6 +968,9 @@ instance SquareMatrix 3 where
                     (( x12*x31 - x11*x32)/d)
                     (( -x12*x21 + x11*x22)/d)
             where d = det m
+    diag (Matrix3x3 x11 _ _
+                    _ x22 _
+                    _ _ x33) = Vector3 x11 x22 x33
 
 --------------------------------------------------------------------------------
 -- 3x4 Matrix
@@ -936,7 +986,7 @@ instance TensorMath 3 4 where
     eye = Matrix3x4 1 0 0 0
                     0 1 0 0
                     0 0 1 0
-    diag x = Matrix3x4 x 0 0 0
+    toDiag x = Matrix3x4 x 0 0 0
                        0 x 0 0
                        0 0 x 0
     Matrix3x4 x11 x12 x13 x14
@@ -1014,10 +1064,10 @@ instance TensorMath 3 4 where
         (c/x11) (c/x12) (c/x13) (c/x14)
         (c/x21) (c/x22) (c/x23) (c/x24)
         (c/x31) (c/x32) (c/x33) (c/x34)
-    diagn (Vector3 x y z) = Matrix3x4 x 0 0 0
+    toDiagn (Vector3 x y z) = Matrix3x4 x 0 0 0
                                       0 y 0 0
                                       0 0 z 0
-    diagm (Covector4 x y z _) = Matrix3x4 x 0 0 0
+    toDiagm (Covector4 x y z _) = Matrix3x4 x 0 0 0
                                           0 y 0 0
                                           0 0 z 0
     toColRow (Matrix3x4 x11 x12 x13 x14
@@ -1055,6 +1105,9 @@ instance TensorMath 3 4 where
         x14 x24 x34
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix3x4 x1 _ _ _
+                          _ x2 _ _
+                          _ _ x3 _) = x1 `f` x2 `f` x3
 
 --------------------------------------------------------------------------------
 -- 4x2 Matrix
@@ -1073,7 +1126,7 @@ instance TensorMath 4 2 where
                     0 1
                     0 0
                     0 0
-    diag x = Matrix4x2 x 0
+    toDiag x = Matrix4x2 x 0
                        0 x
                        0 0
                        0 0
@@ -1177,11 +1230,11 @@ instance TensorMath 4 2 where
         (c/x21) (c/x22)
         (c/x31) (c/x32)
         (c/x41) (c/x42)
-    diagn (Vector4 x y _ _) = Matrix4x2 x 0
+    toDiagn (Vector4 x y _ _) = Matrix4x2 x 0
                                         0 y
                                         0 0
                                         0 0
-    diagm (Covector2 x y) = Matrix4x2 x 0
+    toDiagm (Covector2 x y) = Matrix4x2 x 0
                                       0 y
                                       0 0
                                       0 0
@@ -1221,6 +1274,10 @@ instance TensorMath 4 2 where
         x12 x22 x32 x42
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix4x2 x1 _
+                          _ x2
+                          _ _
+                          _ _) = x1 `f` x2
 
 
 --------------------------------------------------------------------------------
@@ -1240,7 +1297,7 @@ instance TensorMath 4 3 where
                     0 1 0
                     0 0 1
                     0 0 0
-    diag x = Matrix4x3 x 0 0
+    toDiag x = Matrix4x3 x 0 0
                        0 x 0
                        0 0 x
                        0 0 0
@@ -1344,11 +1401,11 @@ instance TensorMath 4 3 where
         (c/x21) (c/x22) (c/x23)
         (c/x31) (c/x32) (c/x33)
         (c/x41) (c/x42) (c/x43)
-    diagn (Vector4 x y z _) = Matrix4x3 x 0 0
+    toDiagn (Vector4 x y z _) = Matrix4x3 x 0 0
                                         0 y 0
                                         0 0 z
                                         0 0 0
-    diagm (Covector3 x y z) = Matrix4x3 x 0 0
+    toDiagm (Covector3 x y z) = Matrix4x3 x 0 0
                                         0 y 0
                                         0 0 z
                                         0 0 0
@@ -1391,6 +1448,10 @@ instance TensorMath 4 3 where
         x13 x23 x33 x43
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix4x3 x1 _ _
+                          _ x2 _
+                          _ _ x3
+                          _ _ _) = x1 `f` x2 `f` x3
 
 --------------------------------------------------------------------------------
 -- 4x4 Square Matrix
@@ -1409,7 +1470,7 @@ instance TensorMath 4 4 where
                     0 1 0 0
                     0 0 1 0
                     0 0 0 1
-    diag x = Matrix4x4 x 0 0 0
+    toDiag x = Matrix4x4 x 0 0 0
                        0 x 0 0
                        0 0 x 0
                        0 0 0 x
@@ -1513,11 +1574,11 @@ instance TensorMath 4 4 where
         (c/x21) (c/x22) (c/x23) (c/x24)
         (c/x31) (c/x32) (c/x33) (c/x34)
         (c/x41) (c/x42) (c/x43) (c/x44)
-    diagn (Vector4 x y z w) = Matrix4x4 x 0 0 0
+    toDiagn (Vector4 x y z w) = Matrix4x4 x 0 0 0
                                         0 y 0 0
                                         0 0 z 0
                                         0 0 0 w
-    diagm (Covector4 x y z w) = Matrix4x4 x 0 0 0
+    toDiagm (Covector4 x y z w) = Matrix4x4 x 0 0 0
                                           0 y 0 0
                                           0 0 z 0
                                           0 0 0 w
@@ -1563,6 +1624,10 @@ instance TensorMath 4 4 where
         x14 x24 x34 x44
     minmax x y = (fmap fst m, fmap snd m)
         where m = pure minmax' <*> x <*> y
+    foldDiag f (Matrix4x4 x1 _ _ _
+                          _ x2 _ _
+                          _ _ x3 _
+                          _ _ _ x4) = x1 `f` x2 `f` x3 `f` x4
 
 instance SquareMatrix 4 where
     det (Matrix4x4 x11 x12 x13 x14 x21 x22 x23 x24 x31 x32 x33 x34 x41 x42 x43 x44) 
@@ -1594,5 +1659,9 @@ instance SquareMatrix 4 where
                     ((x13*(x22*x41-x21*x42)+x12*(x21*x43-x23*x41)+x11*(x23*x42-x22*x43))/d)
                     ((x13*(x21*x32-x22*x31)+x12*(x23*x31-x21*x33)+x11*(x22*x33-x23*x32))/d)
             where d = det m
+    diag (Matrix4x4 x11 _ _ _
+                    _ x22 _ _
+                    _ _ x33 _
+                    _ _ _ x44) = Vector4 x11 x22 x33 x44
 
 

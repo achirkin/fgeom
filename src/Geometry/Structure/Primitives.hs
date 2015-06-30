@@ -6,16 +6,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Geometry.Structure.Primitives
 -- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- License     :  BSD3
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- | Contains various geometric primitives
+-- Contains various geometric primitives
 --
 -----------------------------------------------------------------------------
 
@@ -29,7 +28,6 @@ module Geometry.Structure.Primitives
 
 import Prelude hiding (foldr, foldl, foldr1, foldl1, mapM, sequence)
 
-import Control.Applicative ( Applicative(..) )
 import Control.Monad (liftM2)
 import Foreign.Storable ( Storable(..) )
 import Foreign.Ptr (castPtr)
@@ -234,13 +232,15 @@ deriving instance Eq (Vector n x) => Eq (Polygon n x)
 deriving instance Show (Vector n x) => Show (Polygon n x)
 
 -- | Stupid, partial algorithm, to fix it!
-triangulate :: Polygon n x -> [Point n x]
-triangulate (SimpleConvexPolygon pts) = f pts []
+triangulate :: Polygon n x -> [(Int,Int,Int)]
+triangulate (SimpleConvexPolygon pts) = f [0..length pts] []
     where f [] [] = []
           f [_] [] = []
           f [_,_] [] = []
           f [] qs = f (reverse qs) []
           f [a] qs = f (reverse $ a:qs) []
           f [a,b] qs = f (reverse $ b:a:qs) []
-          f (a:b:c:xs) qs = a:b:c: f (c:xs) (a:qs)
+          f (a:b:c:xs) qs = (a,b,c) : f (c:xs) (a:qs)
 triangulate _ = undefined
+
+

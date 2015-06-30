@@ -3,24 +3,21 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, DataKinds #-}
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Geometry.Space.Transform.SpaceTransform
 -- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- License     :  BSD3
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- |
+-- Space transform definition
 --
 -----------------------------------------------------------------------------
 
 module Geometry.Space.Transform.SpaceTransform where
 
 import GHC.TypeLits
-
-import Control.Applicative (Applicative ())
 
 import Geometry.Space.Types
 import Geometry.Space.Quaternion
@@ -71,10 +68,13 @@ class ( Functor (STransform s t)
     mapTransform :: (Functor f) => STransform s t (f x) -> f (STransform s t x)
     -- | Lift transform into Monadic data
     liftTransform :: (Monad m) => STransform s t (m x) -> m (STransform s t x)
-    -- | Transform another STransform using this one. Multitype analogue of `>>=`
+    -- | Transform another STransform using this one. Multitype analogue of `<*>`
     mergeSecond :: (SpaceTransform s1 t) => STransform s1 t (x -> y) -> STransform s t x -> STransform s1 t y
-    -- | Transform this STransform using another one. Multitype analogue of `>>=`
+    -- | Transform this STransform using another one. Multitype analogue of `<*>`
     mergeFirst :: (SpaceTransform s1 t) => STransform s t (x -> y) -> STransform s1 t x -> STransform s1 t y
+    -- | Inverse of the transform that should satisfy
+    -- >>> return x == inverseTransform s >> s
+    inverseTransform :: STransform s t x -> STransform s t x
 
 -- | Kind of object that can be transformed
 class Transformable x t | x -> t where

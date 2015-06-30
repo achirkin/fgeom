@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
-module Geometry.Space.Vector3Test where
+module VectorTests.Vector3 where
 import Geometry.Space
 
 
 import Test.Framework
-import Geometry.Space.VectorGenerators ()
+import VectorTests.VectorGenerators ()
 
 
 prop_vectorProductAnticommutativity :: Vector3 Double -> Vector3 Double -> Bool

@@ -6,7 +6,6 @@
 --
 -- Maintainer  :  Artem M. Chirkin  <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :  portable
 --
 -- The module provides mathematical operations on vector types
 --

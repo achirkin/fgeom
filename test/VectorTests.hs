@@ -4,15 +4,12 @@ module Main where
 
 import Test.Framework
 
-import {-@ HTF_TESTS @-} Geometry.Space.Vector3Test
-import {-@ HTF_TESTS @-} Geometry.Space.Vector4Test
-import {-@ HTF_TESTS @-} Geometry.Space.Matrix2x2Test
-import {-@ HTF_TESTS @-} Geometry.Space.Matrix3x3Test
-import {-@ HTF_TESTS @-} Geometry.Space.Matrix4x4Test
-import {-@ HTF_TESTS @-} Geometry.Structure.EuclidianDistanceTest
+import {-@ HTF_TESTS @-} VectorTests.Vector3
+import {-@ HTF_TESTS @-} VectorTests.Vector4
+import {-@ HTF_TESTS @-} VectorTests.Matrix2x2
+import {-@ HTF_TESTS @-} VectorTests.Matrix3x3
+import {-@ HTF_TESTS @-} VectorTests.Matrix4x4
 
-
-import {-@ HTF_TESTS @-} Geometry.Math.PolynomialTest
 
 main :: IO()
 main = htfMain htf_importedTests

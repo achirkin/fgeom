@@ -7,16 +7,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Geometry.Structure.BoundingBox
 -- Copyright   :  Copyright (C) 2015 Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- License     :  BSD3
 --
 -- Maintainer  :  Artem M. Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  Experimental
--- Portability :
 --
--- |
+-- Bound any geometric objects in space
 --
 -----------------------------------------------------------------------------
 
@@ -25,8 +24,6 @@ module Geometry.Structure.BoundingBox
     , Boundable (..), boundPair, boundSet
     ) where
 
-import Data.Traversable (Traversable(..))
-import Control.Applicative (Applicative(..))
 import Control.Monad (liftM2)
 import Foreign.Storable ( Storable(..) )
 import Foreign.Ptr (castPtr)

@@ -1,11 +1,12 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
-module Geometry.Space.Vector4Test where
+module VectorTests.Vector4 where
 
 import Geometry.Space
 import Geometry.Space.Quaternion
+import Geometry.Space.Transform
 
 import Test.Framework
-import Geometry.Space.VectorGenerators ()
+import VectorTests.VectorGenerators ()
 
 
 -- testing units
@@ -50,3 +51,8 @@ prop_rotScale (Vector3 0 0 0) _ = True
 prop_rotScale a b = normL2Squared (result .- b) / max (normL2Squared result) (normL2Squared b) < 1e-15
     where q = getRotScale a b
           result = rotScale q a
+
+prop_qtransInverse :: Quaternion Double -> Vector3 Double -> Vector3 Double -> Bool
+prop_qtransInverse q v x = runApprox (areClose x y) 1e-5
+    where s = QTransform q v x
+          y = transform $ inverseTransform s >> s :: Vector3 Double
