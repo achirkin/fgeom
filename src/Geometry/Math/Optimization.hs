@@ -24,7 +24,7 @@ import GHC.TypeLits (Nat)
 import Geometry.Space
 import Geometry.Math.Calculus
 
-import Debug.Trace (traceShow)
+--import Debug.Trace (traceShow)
 
 
 -- | If we do not know initial step to select second point
@@ -121,9 +121,9 @@ instance Optimization 1 where
                     xn1 <- liftM xp $ minimize1Dbounded (F0D1 fp) (0, te)
                     near <- areClose xn1 xn
                     flat <- isSmall' gn
-                    case near && (flat || thesame) of
-                        True -> return $ (xn1.+xn)/..2
-                        False -> opt sn gn xn1 near
+                    if near && (flat || thesame)
+                       then return $ (xn1.+xn)/..2
+                       else opt sn gn xn1 near
 
 
 instance Optimization 2 where
@@ -131,8 +131,8 @@ instance Optimization 2 where
     data NumericFunction1D 2 x = F2D1 (x -> x) (x -> x) (x -> x)
     estimateFunction a d f = F2 f (gradient a d f) (hessian d f)
     estimateFunction1D a d f = F2D1 f (derivative' a d f) (derivative2' a d f)
-    minimize1Dbounded (F2D1 _ _ _) _ = undefined
-    minimize1D (F2D1 _ _ _) _ = undefined
+    minimize1Dbounded F2D1{} _ = undefined
+    minimize1D F2D1{} _ = undefined
     -- | Damped Newton. Similar, but not equal to
     --   https://en.wikipedia.org/wiki/Levenberg–Marquardt_algorithm
     minimize (F2 f df ddf) x0 = getEps >>= opt (f x0) x0 g0 False . (startEmult *)
