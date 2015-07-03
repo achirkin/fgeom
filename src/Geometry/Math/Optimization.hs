@@ -52,10 +52,10 @@ class Optimization (r :: Nat) where
     -- |  Construct a function together with its derivatives up to order `r`
     estimateFunction1D :: (Floating x) => ApproximationType -> x -> (x -> x) -> NumericFunction1D r x
     -- | Minimize 1D function w.r.t. its argument within an interval
-    minimize1Dbounded :: (Floating x, Ord x, Show x) => NumericFunction1D r x -> (x,x) -> Approximately x x
-    minimize1D :: (RealFloat x, Show x) => NumericFunction1D r x -> x -> Approximately x x
+    minimize1Dbounded :: (Floating x, Ord x) => NumericFunction1D r x -> (x,x) -> Approximately x x
+    minimize1D :: (RealFloat x) => NumericFunction1D r x -> x -> Approximately x x
     -- | Minimize function of multiple arguments
-    minimize :: ( RealFloat x, Show x, Show (Tensor n 1 x)
+    minimize :: ( RealFloat x
                 , SquareMatrix n
                 , TensorMath n 1
                 , TensorMath 1 n )
@@ -109,7 +109,10 @@ instance Optimization 1 where
                         else (fun $ x0' - signum g0' * 2 * abs d, (f0', g0', x0'))
                     = opt fgx0 fgx1 e
     -- | https://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
-    minimize (F1 f df) x0 =  opt zeros (normL2Squared $ df x0) x0 False
+    minimize (F1 f df) x0 = isSmall (df x0) >>= \small ->
+        if small
+        then return x0
+        else opt zeros (normL2Squared $ df x0) x0 False
         where opt so go xn thesame
                | any isInfinite xn || any isNaN xn = return xn
                | ngrad <- neg $ df xn
@@ -135,7 +138,10 @@ instance Optimization 2 where
     minimize1D F2D1{} _ = undefined
     -- | Damped Newton. Similar, but not equal to
     --   https://en.wikipedia.org/wiki/Levenberg–Marquardt_algorithm
-    minimize (F2 f df ddf) x0 = getEps >>= opt (f x0) x0 g0 False . (startEmult *)
+    minimize (F2 f df ddf) x0 = isSmall (df x0) >>= \small ->
+        if small
+        then return x0
+        else getEps >>= opt (f x0) x0 g0 False . (startEmult *)
         where g0 = foldDiag max (abs <$> ddf x0) * 8
               opt fn xn gn thesame dn
                | any isInfinite xn || any isNaN xn = return xn

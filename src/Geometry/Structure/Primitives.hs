@@ -19,22 +19,29 @@
 -----------------------------------------------------------------------------
 
 module Geometry.Structure.Primitives
-    ( Point
-    , Line (), lineFromPD, lineFromPP,pointOnLine, lineDir
-    , Ray (..), LineSegment (..)
-    , HyperPlane (), Plane, plane, planeNormal, distToOrigin
-    , Polygon (..), triangulate
-    ) where
+--    ( Point
+--    , Line (), lineFromPD, lineFromPP,pointOnLine, lineDir
+--    , Ray (..), LineSegment (..)
+--    , HyperPlane (), Plane, plane, planeNormal, distToOrigin
+--    , Polygon (..), triangulate
+--    , convexPolygons, inside, triangulateConvex
+--    )
+    where
 
 import Prelude hiding (foldr, foldl, foldr1, foldl1, mapM, sequence)
 
 import Control.Monad (liftM2)
+--import Control.Arrow
 import Foreign.Storable ( Storable(..) )
 import Foreign.Ptr (castPtr)
 
 
 import Geometry.Space
 import Geometry.Space.Transform
+
+import Geometry.Math.Statistics
+import Debug.Trace (traceShow)
+
 
 -----------------------------------------------------------------------------------------
 -- | Point in n-dimensional space
@@ -232,15 +239,127 @@ deriving instance Eq (Vector n x) => Eq (Polygon n x)
 deriving instance Show (Vector n x) => Show (Polygon n x)
 
 -- | Stupid, partial algorithm, to fix it!
-triangulate :: Polygon n x -> [(Int,Int,Int)]
-triangulate (SimpleConvexPolygon pts) = f [0..length pts] []
-    where f [] [] = []
-          f [_] [] = []
-          f [_,_] [] = []
-          f [] qs = f (reverse qs) []
-          f [a] qs = f (reverse $ a:qs) []
-          f [a,b] qs = f (reverse $ b:a:qs) []
-          f (a:b:c:xs) qs = (a,b,c) : f (c:xs) (a:qs)
-triangulate _ = undefined
+triangulate :: (Fractional x, Ord x) => Polygon 2 x -> [(Int,Int,Int)]
+triangulate (SimpleConvexPolygon pts) = triangulateConvex [1..length pts] []
+triangulate (SimplePolygon pts) = f (cycle $ zip3 [1..] pts convexs) (length pts)
+    where (convexs, area) = convexPolygons pts
+          checkIfEar trig caps = not . any (\(_,p,_) -> inside trig p) . filter (\(_,_,conv) -> not conv) $ caps
+          chk x0 x1 x2 = det2 (x1.-x0) (x2.-x1) * area >= 0
+          f ((i1,_,_):(i2,_,_):(i3,_,_):_) 3 = [(i1,i2,i3)] -- triangle
+          f _ k | k < 3 = [] -- just to be safe - this should be impossible
+          f (_:xs@(_:(_,_,False):_)) n = f xs n -- skip for now if concave
+          f ((_,x1,_):ss@((i2,x2,c2):(i3,x3,True):(i4,x4,c4):xs@((_,x5,_):_))) n
+            = if checkIfEar (x2,x3,x4) (take (n-3) xs) -- traceShow (take n $ map (\(i,_,c) -> (i, if c then '1' else '0')) ss) $
+              then (i2,i3,i4) : f (cycle . take (n-1) $ (i2,x2,c2 || chk x1 x2 x4):(i4,x4,c4 || chk x2 x4 x5):xs) (n-1)
+              else f ss n
+          f _ _ = traceShow "Ups!" []
+--triangulate (SimplePolygon pts) = f points [] k0 n0
+--    where f rpts lpts 0 _ = triangulateConvex (map (\(i,_,_) -> i) $ revJoin rpts lpts) [] -- if convex polygon, than simple
+--          f (p1:p2@(_,_,False):rpts) lpts k n = f (p2:rpts) (p1:lpts) k n -- skip for now if concave
+--          f ((i0,x0,c0):(i,x,True):(i1,x1,c1):rpts) lpts k =
+--            if checkIfEar (x0,x,x1) (revJoin rpts lpts)
+--            then (i0,i,i1) : f
+--          --undefined --case (i == i0+1, i == i1-1) of
+----            (True,True) -> if checkIfEar c0 c c1 caps then (i0,i,i1)
+--          f _ _ _ = []
+--          (convexs, area) = convexPolygons pts
+--          points = zip3 [1..] pts convexs
+--          n0 = length $ convexs
+--          k0 = length $ filter not convexs
+----          (convPts, cavePts) = splitConvex points
+----          splitConvex ((i,c,True):xs) = first ((i,c):) $ splitConvex xs
+----          splitConvex ((i,c,False):xs) = second ((i,c):) $ splitConvex xs
+----          splitConvex [] = ([],[])
+--          revJoin rpts (x:lpts) = revJoin (x:rpts) lpts
+--          revJoin rpts [] = rpts
+--          checkIfEar c0 c c1 caps = not . any (\(_,p,_) -> inside (c0,c,c1) p) . filter (\(_,_,conv) -> conv) $ caps
+triangulate (GenericPolygon []) = []
+triangulate (GenericPolygon (inner:_)) = triangulate inner
 
+
+triangulate3 :: (RealFloat x) => Polygon 3 x -> [(Int,Int,Int)]
+triangulate3 (SimpleConvexPolygon pts) = triangulate $ SimpleConvexPolygon xs
+    where (_,_,_,xs) = runApprox (planarize pts) 0.0001
+triangulate3 (SimplePolygon pts) = triangulate $ SimplePolygon xs
+    where (_,_,_,xs) = runApprox (planarize pts) 0.0001
+triangulate3 (GenericPolygon pgs) = pgs >>= triangulate3
+
+-- whether a point is inside triangle or not
+inside :: (Num x, Ord x) => (Vector2 x,Vector2 x,Vector2 x) -> Vector2 x -> Bool
+inside (p1,p2,p3) p = if (s > 0) /= (t > 0) then False
+                              else if a >= 0 then cmp s t a
+                                             else cmp (-s) (-t) (-a)
+            where v1@(Vector2 x1 y1) = p2 .- p1
+                  v2@(Vector2 x2 y2) = p3 .- p1
+                  Vector2 s t = (Matrix2x2 y2 (-x2) (-y1) x1) `prod` (p .- p1)
+                  a = det2 v1 v2
+                  cmp s' t' a' = s' > 0 && s' + t' < a'
+
+-- | Triangulates simple convex polygon
+triangulateConvex :: [Int] -> [Int] -> [(Int,Int,Int)]
+triangulateConvex [] [] = []
+triangulateConvex [_] [] = []
+triangulateConvex [_,_] [] = []
+triangulateConvex [] qs = triangulateConvex (reverse qs) []
+triangulateConvex [a] qs = triangulateConvex (reverse $ a:qs) []
+triangulateConvex [a,b] qs = triangulateConvex (reverse $ b:a:qs) []
+triangulateConvex (a:b:c:xs) qs = (a,b,c) : triangulateConvex (c:xs) (a:qs)
+--triangulateConvex _ _ = []
+
+-- | For simple polygons says for each point whether it is convex (True) or concave (False)
+convexPolygons :: (Fractional x, Ord x) => [Point 2 x] -> ([Bool], x)
+convexPolygons pts = (map ((>=0) . (area*)) cprods, area/2)
+    where edges = zipWith (.-) pts (last pts : pts) -- all edges n->1, 1->2 ... n-1->n
+          cprods = f edges (head edges) -- cross products for each point
+          area = sum $ f pts (head pts) -- area of whole thing (shoelace)
+          f (a:xs@(b:_)) l = det2 a b : f xs l
+          f [z] l = [det2 z l]
+          f [] _ = []
+
+
+
+--data CycledList x = CycledList (CycledList x) x (CycledList x)
+--
+--singletonList :: x -> CycledList x
+--singletonList x = l
+--    where l = CycledList l x l
+--
+--goLeft :: CycledList x -> CycledList x
+--goLeft (CycledList l _ _) = l
+--
+--goRight :: CycledList x -> CycledList x
+--goRight (CycledList _ _ r) = r
+--
+--
+--addLeft :: x -> CycledList x -> CycledList x
+--addLeft x (CycledList (CycledList l x0 _) x1 r) = m
+--    where m = CycledList n x1 r
+--          n = CycledList (CycledList l x0 n) x m
+--
+--addRight :: x -> CycledList x -> CycledList x
+--addRight x (CycledList l x0 (CycledList _ x1 r)) = m
+--    where m = CycledList l x0 n
+--          n = CycledList m x (CycledList n x1 r)
+--
+--
+--flatten :: CycledList x -> [x]
+--flatten (CycledList _ x r) = x : flatten r
+
+--instance Functor CycledList where
+--    fmap f (CycledList xs ys) = CycledList (fmap xs) (fmap ys)
+--
+--instance Applicative (Tensor 0 m) where
+--    pure x = CycledList [x] []
+--    CycledList f1 f2  <*> CycledList x1 x2 = CycledList
+--
+--instance Fl.Foldable (Tensor 0 m) where
+--    foldr _ a _ = a
+--    foldl _ a _ = a
+--    foldr1 _ _ = undefined
+--    foldl1 _ _ = undefined
+--instance Traversable (Tensor 0 m) where
+--    traverse _ _ = pure S0m
+--    sequenceA _ =  pure S0m
+--    mapM _ _ = return S0m
+--    sequence _ = return S0m
 
