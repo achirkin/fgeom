@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,6 +22,7 @@ module Geometry.Space.Types
     , Vector3, det3, cross
     , Vector4, fromHom
     , Scalar, Matrix2x2, Matrix3x3, Matrix4x4
+    , numElems
     ) where
 
 import Prelude hiding (foldl1)
@@ -34,12 +37,22 @@ import Foreign.Marshal.Array ( advancePtr )
 import Foreign.Ptr ( Ptr, plusPtr, castPtr )
 
 import GHC.TypeLits
+import Data.Proxy
 
 --------------------------------------------------------------------------------
 -- | Tensor type is for all vector and matrix types
 --------------------------------------------------------------------------------
 
 data family Tensor (n::Nat) (m::Nat) a
+
+-- | Number of elements in a Tensor
+numElems :: KnownNat (n*m)
+         => Tensor n m a -> Int
+numElems x = numElems' x Proxy
+
+numElems' :: KnownNat (n*m)
+         => Tensor n m a -> Proxy (n * m) -> Int
+numElems' _ = fromInteger . natVal
 
 -- | Usual vectors (contravariant vectors)
 type Vector n a = Tensor n 1 a
