@@ -155,17 +155,17 @@ rotateEulerM x y z = Matrix4x4
 fromQuaternion :: (Eq a, Floating a)
                => Quaternion a  -- ^ Quaternion of r
                -> Tensor 4 4 a
-fromQuaternion (Q 0 0 0 w) = Matrix4x4
-    w 0 0 0
-    0 w 0 0
-    0 0 w 0
-    0 0 0 1
-fromQuaternion q@(Q x y z w) = Matrix4x4
-    (w + c1*x*x) (c1*x*y - z) (c1*x*z + y) 0
-    (c1*x*y + z) (w + c1*y*y) (c1*y*z - x) 0
-    (c1*x*z - y) (c1*y*z + x) (w + c1*z*z) 0
-     0              0              0       1
-        where c1 = 1 / (sqrt (square q) + w)
+fromQuaternion (Q x y z w) | c <- sqrt (x*x + y*y + z*z + w*w) + w =
+    if c == 0
+    then Matrix4x4 w 0 0 0
+                   0 w 0 0
+                   0 0 w 0
+                   0 0 0 1
+    else Matrix4x4
+    (w + x*x/c) (x*y/c - z) (x*z/c + y) 0
+    (x*y/c + z) (w + y*y/c) (y*z/c - x) 0
+    (x*z/c - y) (y*z/c + x) (w + z*z/c) 0
+      0           0           0         1
 
 
 -- | Create a transform matrix so that applying it at camera on @Q 0 0 -1 0@ and @Q 0 0 0 1@  will make it looking at specified direction.

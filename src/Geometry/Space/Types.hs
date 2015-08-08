@@ -51,7 +51,7 @@ numElems :: KnownNat (n*m)
 numElems x = numElems' x Proxy
 
 numElems' :: KnownNat (n*m)
-         => Tensor n m a -> Proxy (n * m) -> Int
+          => Tensor n m a -> Proxy (n * m) -> Int
 numElems' _ = fromInteger . natVal
 
 -- | Usual vectors (contravariant vectors)

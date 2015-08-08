@@ -89,11 +89,10 @@ conjugate (Q b c d a) = Q (negate b) (negate c) (negate d) a
 rotScale :: (Floating a, Eq a) => Quaternion a -> Vector3 a -> Vector3 a
 {-# SPECIALISE INLINE rotScale :: Quaternion Double -> Vector3 Double -> Vector3 Double #-}
 {-# SPECIALISE INLINE rotScale :: Quaternion Float -> Vector3 Float -> Vector3 Float #-}
-rotScale _ p@(Vector3 0 0 0) = p
-rotScale (Q 0 0 0 t) (Vector3 a b c) = Vector3 (a*t) (b*t) (c*t)
-rotScale (Q i j k t) (Vector3 a b c) =
-    let dot = ( a*i + b*j + c*k ) / (len + t)
-        len = sqrt $ i*i + j*j + k*k + t*t
+rotScale (Q i j k t) (Vector3 a b c) | lt <- sqrt (i*i + j*j + k*k + t*t) + t =
+    if lt == 0
+    then Vector3 (a*t) (b*t) (c*t)
+    else let dot = ( a*i + b*j + c*k ) / lt
     in Vector3
         (a*t + i*dot + c*j - b*k)
         (b*t + j*dot + a*k - c*i)

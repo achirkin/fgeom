@@ -291,7 +291,7 @@ inside (p1,p2,p3) p = if (s > 0) /= (t > 0) then False
                                              else cmp (-s) (-t) (-a)
             where v1@(Vector2 x1 y1) = p2 .- p1
                   v2@(Vector2 x2 y2) = p3 .- p1
-                  Vector2 s t = (Matrix2x2 y2 (-x2) (-y1) x1) `prod` (p .- p1)
+                  Vector2 s t = Matrix2x2 y2 (-x2) (-y1) x1 `prod` (p .- p1)
                   a = det2 v1 v2
                   cmp s' t' a' = s' > 0 && s' + t' < a'
 

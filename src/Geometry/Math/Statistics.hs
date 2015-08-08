@@ -91,7 +91,7 @@ planarize points = do
 --    liftM a2x $ minimize (sphericalFunc3d d) (Vector2 0 0)
 --    x <- liftM a2x $ minimize (sphericalFunc3d $ neg d) (Vector2 0 0)
     let y = z `cross` x
-    return $ (m, x, y, project m x y points)
+    return (m, x, y, project m x y points)
     where d@(Matrix3x3 xd vxy vxz _ yd vyz _ _ zd) = var points
           m = mean points
           minn d' a0 = liftM a2x $ minimize (sphericalFunc3d d') a0
@@ -104,7 +104,7 @@ project :: ( Foldable a
            , Functor a
            , RealFloat x)
         => Vector 3 x -> Vector 3 x -> Vector 3 x -> a (Vector 3 x) -> a (Vector 2 x)
-project m x y points = fmap proj points
+project m x y = fmap proj
     where proj p' = let p = p' .- m in Vector2 (x .*. p) (y .*. p)
 
 -- | Direction of the smallest variance in a 3D point set

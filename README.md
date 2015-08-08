@@ -3,6 +3,7 @@ Experimental package for Haskell geometry types and functions to be used later t
 
 ## TODO:
 
+* SWITCH Quaternions back to standard rotation, otherwise rotation on angle PI is not possible
 * Local optimization methods are not fully implemented
 * Too much code repetition in Types declaration - think of how to reduce this
 * Speed has not been checked yet
